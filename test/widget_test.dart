@@ -1,7 +1,10 @@
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:duolingo_clone/features/auth/auth_flow.dart';
 import 'package:duolingo_clone/features/auth/local_profiles.dart';
 import 'package:duolingo_clone/features/learn/learning_home.dart';
 import 'package:duolingo_clone/features/learn/learning_progress.dart';
+import 'package:duolingo_clone/features/learn/learning_tab_bar.dart';
 import 'package:duolingo_clone/main.dart';
 import 'package:duolingo_clone/shared/shark_mascot.dart';
 import 'package:flutter/material.dart';
@@ -247,6 +250,71 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('Hover glides between tabs and fades without selecting a tab', (
+    tester,
+  ) async {
+    int? selection;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          bottomNavigationBar: LearningTabBar(
+            selectedIndex: 0,
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.explore),
+                label: 'Belajar',
+              ),
+              NavigationDestination(icon: Icon(Icons.flag), label: 'Quest'),
+              NavigationDestination(icon: Icon(Icons.store), label: 'Toko'),
+            ],
+            onSelected: (index) => selection = index,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final quest = tester.getCenter(find.text('Quest'));
+    final shop = tester.getCenter(find.text('Toko'));
+    final hover = find.byKey(const ValueKey('learning-tab-hover'));
+    final pill = find.descendant(
+      of: hover,
+      matching: find.byType(DecoratedBox),
+    );
+    final fade = find.descendant(
+      of: hover,
+      matching: find.byType(FadeTransition),
+    );
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+
+    await mouse.addPointer(location: quest);
+    await tester.pumpAndSettle();
+    expect(tester.getCenter(pill).dx, closeTo(quest.dx, 1));
+    expect(tester.widget<FadeTransition>(fade).opacity.value, 1);
+
+    await mouse.moveTo(shop);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 55));
+    expect(tester.getCenter(pill).dx, inExclusiveRange(quest.dx, shop.dx));
+    await tester.pumpAndSettle();
+    expect(tester.getCenter(pill).dx, closeTo(shop.dx, 1));
+    expect(selection, isNull);
+
+    await mouse.moveTo(const Offset(5, 5));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 55));
+    expect(
+      tester.widget<FadeTransition>(fade).opacity.value,
+      inExclusiveRange(0, 1),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.widget<FadeTransition>(fade).opacity.value, 0);
+    await mouse.removePointer();
+
+    await tester.tap(find.text('Toko'));
+    expect(selection, 2);
+  });
 
   test('Repeat practice preserves XP and a freeze covers one missed day', () {
     final progress = const LearningProgress(freezes: 1)
