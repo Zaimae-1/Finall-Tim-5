@@ -118,9 +118,17 @@ void main() {
       }
       await _tap(tester, 'Periksa jawaban');
       expect(find.text('Tepat sekali!'), findsOneWidget);
+      expect(
+        tester.widget<SharkMascot>(find.byType(SharkMascot)).mood,
+        SharkMood.correct,
+      );
       await _tap(tester, 'Lanjut');
     }
     expect(find.text('100% akurat · +15 XP'), findsOneWidget);
+    expect(
+      tester.widget<SharkMascot>(find.byType(SharkMascot)).mood,
+      SharkMood.celebrate,
+    );
     await _tap(tester, 'Kembali ke belajar');
     expect(
       tester

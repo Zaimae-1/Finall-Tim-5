@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../shared/motion.dart';
 import '../../shared/shark_mascot.dart';
 import 'course.dart';
 
@@ -153,7 +154,16 @@ class _LessonPageState extends State<LessonPage> {
                       color: Color(0xFFBA3454),
                     ),
                     const SizedBox(width: 6),
-                    Text('$_hearts', style: theme.textTheme.titleMedium),
+                    MotionReveal(
+                      key: ValueKey(_hearts),
+                      duration: const Duration(milliseconds: 180),
+                      lift: 4,
+                      startScale: 1.26,
+                      child: Text(
+                        '$_hearts',
+                        style: theme.textTheme.titleMedium,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -169,21 +179,22 @@ class _LessonPageState extends State<LessonPage> {
                 children: showSummary
                     ? _summary(context, total)
                     : [
-                        LinearProgressIndicator(
+                        MotionProgress(
                           value: (_index + (_correct == null ? 0 : 1)) / total,
-                          minHeight: 9,
-                          borderRadius: BorderRadius.circular(10),
-                          semanticsLabel: 'Progres latihan',
+                          height: 9,
+                          label: 'Progres latihan',
                         ),
                         const SizedBox(height: 16),
                         Text('Soal ${_index + 1} dari $total'),
                         const SizedBox(height: 14),
-                        Semantics(
-                          header: true,
-                          child: Text(
-                            _exercise.prompt,
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
+                        MotionReveal(
+                          child: Semantics(
+                            header: true,
+                            child: Text(
+                              _exercise.prompt,
+                              style: theme.textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
                         ),
@@ -194,6 +205,7 @@ class _LessonPageState extends State<LessonPage> {
                           _Feedback(
                             correct: answerCorrect,
                             solution: _exercise.solution,
+                            animateMascot: widget.animateMascot,
                           ),
                         if (_saveFailed)
                           Padding(
@@ -354,7 +366,13 @@ class _LessonPageState extends State<LessonPage> {
     final xp = _earnedXp;
     return [
       const SizedBox(height: 14),
-      Center(child: SharkMascot(size: 164, animate: widget.animateMascot)),
+      Center(
+        child: SharkMascot(
+          size: 176,
+          animate: widget.animateMascot,
+          mood: xp == null ? SharkMood.encourage : SharkMood.celebrate,
+        ),
+      ),
       const SizedBox(height: 18),
       Semantics(
         header: true,
@@ -367,11 +385,19 @@ class _LessonPageState extends State<LessonPage> {
         ),
       ),
       const SizedBox(height: 12),
-      Text(
-        xp == null
-            ? 'Coba ulangi latihan untuk memulai dengan 5 hati.'
-            : '${(_correctCount * 100 / total).round()}% akurat · +$xp XP',
-        textAlign: TextAlign.center,
+      MotionReveal(
+        startScale: .92,
+        duration: const Duration(milliseconds: 350),
+        child: Text(
+          xp == null
+              ? 'Coba ulangi latihan untuk memulai dengan 5 hati.'
+              : '${(_correctCount * 100 / total).round()}% akurat · +$xp XP',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
       ),
       const SizedBox(height: 24),
       if (xp == null) ...[
@@ -414,6 +440,9 @@ class _AnswerTile extends StatelessWidget {
       child: OutlinedButton(
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
+          animationDuration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 145),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           minimumSize: const Size(44, 48),
           backgroundColor: selected ? const Color(0xFFDDEFFE) : Colors.white,
@@ -432,36 +461,47 @@ class _AnswerTile extends StatelessWidget {
 }
 
 class _Feedback extends StatelessWidget {
-  const _Feedback({required this.correct, required this.solution});
+  const _Feedback({
+    required this.correct,
+    required this.solution,
+    required this.animateMascot,
+  });
 
   final bool correct;
   final String solution;
+  final bool animateMascot;
 
   @override
   Widget build(BuildContext context) {
     final color = correct ? const Color(0xFF156547) : const Color(0xFFA3203D);
-    return Semantics(
-      liveRegion: true,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: correct ? const Color(0xFFE2F6ED) : const Color(0xFFFCE6EB),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              correct ? Icons.check_circle_outline : Icons.info_outline,
-              color: color,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                correct ? 'Tepat sekali!' : 'Jawaban tepat: $solution',
-                style: TextStyle(color: color, fontWeight: FontWeight.w800),
+    return MotionReveal(
+      child: Semantics(
+        liveRegion: true,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(10, 6, 16, 6),
+          decoration: BoxDecoration(
+            color: correct ? const Color(0xFFE2F6ED) : const Color(0xFFFCE6EB),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              SharkMascot(
+                size: 64,
+                animate: animateMascot,
+                mood: correct ? SharkMood.correct : SharkMood.encourage,
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  child: Text(
+                    correct ? 'Tepat sekali!' : 'Jawaban tepat: $solution',
+                    style: TextStyle(color: color, fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

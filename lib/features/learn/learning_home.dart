@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../shared/motion.dart';
 import '../../shared/shark_mascot.dart';
 import '../auth/local_profiles.dart';
 import 'course.dart';
@@ -48,6 +49,7 @@ class _LearningHomeState extends State<LearningHome> {
   var _tab = _Destination.learn;
   bool _saving = false;
   bool _lessonOpen = false;
+  String? _recentlyCompleted;
 
   Future<void> _save(LearningProgress next) async {
     setState(() => _saving = true);
@@ -95,6 +97,11 @@ class _LearningHomeState extends State<LearningHome> {
           ),
         ),
       );
+      if (mounted &&
+          !progress.completed.contains(lesson.id) &&
+          _progress?.completed.contains(lesson.id) == true) {
+        setState(() => _recentlyCompleted = lesson.id);
+      }
     } finally {
       _lessonOpen = false;
     }
@@ -191,8 +198,14 @@ class _LearningHomeState extends State<LearningHome> {
               ),
               bottomNavigationBar: LearningTabBar(
                 selectedIndex: _tab.index,
-                onSelected: (index) =>
-                    setState(() => _tab = _Destination.values[index]),
+                onSelected: (index) {
+                  final next = _Destination.values[index];
+                  if (next == _tab) return;
+                  setState(() {
+                    _tab = next;
+                    _recentlyCompleted = null;
+                  });
+                },
                 destinations: [
                   for (final page in _Destination.values)
                     NavigationDestination(
@@ -288,32 +301,42 @@ class _LearningHomeState extends State<LearningHome> {
         : unlocked
         ? Icons.play_arrow_rounded
         : Icons.lock_outline_rounded;
+    final marker = Container(
+      width: 54,
+      height: 54,
+      decoration: BoxDecoration(
+        color: !unlocked
+            ? const Color(0xFFE5EEF5)
+            : (done ? const Color(0xFFDFF4EE) : _blue),
+        shape: BoxShape.circle,
+        boxShadow: unlocked && !done
+            ? const [BoxShadow(color: Color(0xFF06457B), offset: Offset(0, 4))]
+            : null,
+      ),
+      child: Icon(
+        icon,
+        color: !unlocked
+            ? _muted
+            : (done ? const Color(0xFF177054) : Colors.white),
+      ),
+    );
+    final justUnlocked =
+        index > 0 && !done && lessons[index - 1].id == _recentlyCompleted;
     return Padding(
       padding: EdgeInsets.only(left: index.isOdd ? 22 : 0, bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: !unlocked
-                  ? const Color(0xFFE5EEF5)
-                  : (done ? const Color(0xFFDFF4EE) : _blue),
-              shape: BoxShape.circle,
-              boxShadow: unlocked && !done
-                  ? const [
-                      BoxShadow(color: Color(0xFF06457B), offset: Offset(0, 4)),
-                    ]
-                  : null,
-            ),
-            child: Icon(
-              icon,
-              color: !unlocked
-                  ? _muted
-                  : (done ? const Color(0xFF177054) : Colors.white),
-            ),
-          ),
+          if (justUnlocked)
+            MotionReveal(
+              key: ValueKey(lesson.id),
+              duration: const Duration(milliseconds: 340),
+              startScale: .68,
+              lift: 10,
+              child: marker,
+            )
+          else
+            marker,
           const SizedBox(width: 13),
           Expanded(
             child: Material(
@@ -360,20 +383,20 @@ class _LearningHomeState extends State<LearningHome> {
         const SizedBox(height: 14),
         Text('Selesaikan $goal lesson hari ini.'),
         const SizedBox(height: 10),
-        LinearProgressIndicator(
-          value: count / goal,
-          minHeight: 8,
-          borderRadius: BorderRadius.circular(8),
-          semanticsLabel: 'Progres quest',
-        ),
+        MotionProgress(value: count / goal, label: 'Progres quest'),
         const SizedBox(height: 8),
         Text('$count / $goal lesson · +15 gems'),
         const SizedBox(height: 14),
-        FilledButton(
-          onPressed: !claimed && count == goal && !_saving
-              ? () => _claimQuest(progress, goal)
-              : null,
-          child: Text(claimed ? 'Sudah diklaim' : 'Klaim hadiah'),
+        MotionReveal(
+          key: ValueKey(claimed),
+          startScale: .92,
+          lift: 4,
+          child: FilledButton(
+            onPressed: !claimed && count == goal && !_saving
+                ? () => _claimQuest(progress, goal)
+                : null,
+            child: Text(claimed ? 'Sudah diklaim' : 'Klaim hadiah'),
+          ),
         ),
       ],
     );
@@ -433,7 +456,10 @@ class _LearningHomeState extends State<LearningHome> {
           'Menjaga streak saat kamu melewatkan satu hari. Terpakai jika kamu kembali berlatih keesokan harinya.',
         ),
         const SizedBox(height: 8),
-        Text('Dimiliki: ${progress.freezes}'),
+        MotionReveal(
+          key: ValueKey(progress.freezes),
+          child: Text('Dimiliki: ${progress.freezes}'),
+        ),
         const SizedBox(height: 14),
         FilledButton(
           onPressed: _saving || progress.gems < 25
@@ -699,9 +725,14 @@ class _Metric extends StatelessWidget {
         children: [
           Icon(icon, color: color, size: 21),
           const SizedBox(width: 4),
-          Text(
-            value,
-            style: TextStyle(color: color, fontWeight: FontWeight.w900),
+          MotionReveal(
+            key: ValueKey(value),
+            startScale: 1.18,
+            lift: 3,
+            child: Text(
+              value,
+              style: TextStyle(color: color, fontWeight: FontWeight.w900),
+            ),
           ),
         ],
       ),

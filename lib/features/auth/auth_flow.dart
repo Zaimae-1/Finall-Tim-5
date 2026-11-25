@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../shared/motion.dart';
 import '../../shared/shark_mascot.dart';
 import '../learn/learning_home.dart';
 import 'local_profiles.dart';
@@ -551,7 +552,7 @@ class _PageLayout extends StatelessWidget {
                                   constraints: const BoxConstraints(
                                     maxWidth: 380,
                                   ),
-                                  child: content,
+                                  child: MotionReveal(child: content),
                                 ),
                               ),
                             ),
@@ -563,7 +564,7 @@ class _PageLayout extends StatelessWidget {
                           message: message,
                         ),
                         SizedBox(height: compact ? 22 : 28),
-                        content,
+                        MotionReveal(child: content),
                       ],
                     ],
                   ),
@@ -664,6 +665,7 @@ class _OceanPanel extends StatelessWidget {
                   children: [
                     SharkMascot(
                       size: height < 200 ? height * .75 : height * .69,
+                      mood: SharkMood.greet,
                     ),
                     const SizedBox(width: 6, height: 6),
                     Flexible(
@@ -694,7 +696,9 @@ class _OceanPanel extends StatelessWidget {
                 ),
               )
             else
-              Center(child: SharkMascot(size: height * .85)),
+              Center(
+                child: SharkMascot(size: height * .85, mood: SharkMood.greet),
+              ),
           ],
         ),
       ),
