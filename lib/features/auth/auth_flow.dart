@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../shared/shark_mascot.dart';
+import '../learn/learning_home.dart';
 import 'local_profiles.dart';
 
 const _ink = Color(0xFF12334C);
@@ -74,51 +76,34 @@ class _AuthFlowState extends State<AuthFlow> {
   @override
   Widget build(BuildContext context) {
     final profile = _profile;
+    if (profile != null) {
+      return LearningHome(
+        key: ValueKey(profile.email),
+        profile: profile,
+        onSignOut: () => setState(() => _profile = null),
+      );
+    }
     return _PageLayout(
-      content: profile == null
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const _PageIntro(
-                  title: 'Belajar Inggris bareng hiu!',
-                  description:
-                      'Mulai dari kata sehari-hari dan latih sedikit demi sedikit.',
-                ),
-                const SizedBox(height: 28),
-                FilledButton(
-                  onPressed: () => _openForm(_AuthMode.register),
-                  child: const Text('Buat akun'),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton(
-                  onPressed: () => _openForm(_AuthMode.signIn),
-                  child: const Text('Masuk'),
-                ),
-              ],
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _PageIntro(
-                  title: 'Halo, ${profile.name}!',
-                  description:
-                      'Akun demo aktif. Pelajaran akan hadir saat jalur belajar siap.',
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  profile.email,
-                  style: const TextStyle(
-                    color: _ink,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 28),
-                OutlinedButton(
-                  onPressed: () => setState(() => _profile = null),
-                  child: const Text('Keluar'),
-                ),
-              ],
-            ),
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _PageIntro(
+            title: 'Belajar Inggris bareng hiu!',
+            description:
+                'Selami bahasa Inggris lewat latihan singkat setiap hari.',
+          ),
+          const SizedBox(height: 28),
+          FilledButton(
+            onPressed: () => _openForm(_AuthMode.register),
+            child: const Text('Mulai belajar'),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            onPressed: () => _openForm(_AuthMode.signIn),
+            child: const Text('Aku sudah punya akun'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -141,6 +126,9 @@ class _AuthPageState extends State<_AuthPage> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   late _AuthMode _mode = widget.initialMode;
+  int _step = 0;
+  String? _level;
+  int? _goal;
   bool _obscured = true;
   bool _busy = false;
   String? _error;
@@ -165,9 +153,25 @@ class _AuthPageState extends State<_AuthPage> {
     _email.text = email;
     setState(() {
       _mode = _registering ? _AuthMode.signIn : _AuthMode.register;
+      _step = 0;
       _obscured = true;
       _error = null;
     });
+  }
+
+  void _goBack() {
+    if (_busy) return;
+    FocusScope.of(context).unfocus();
+    if (_registering && _step > 0) {
+      setState(() {
+        _step--;
+        _password.clear();
+        _obscured = true;
+        _error = null;
+      });
+    } else {
+      Navigator.of(context).pop();
+    }
   }
 
   Future<void> _submit() async {
@@ -184,6 +188,8 @@ class _AuthPageState extends State<_AuthPage> {
               name: _name.text,
               email: _email.text,
               password: _password.text,
+              level: _level!,
+              dailyGoal: _goal!,
             )
           : await widget.profiles.signIn(
               email: _email.text,
@@ -214,134 +220,256 @@ class _AuthPageState extends State<_AuthPage> {
   Widget build(BuildContext context) {
     final action = _registering ? 'Buat akun' : 'Masuk';
     return PopScope(
-      canPop: !_busy,
+      canPop: !_busy && (!_registering || _step == 0),
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _registering && _step > 0) _goBack();
+      },
       child: _PageLayout(
-        onBack: _busy ? null : () => Navigator.of(context).pop(),
+        onBack: _busy ? null : _goBack,
         showBack: true,
         compact: true,
-        content: AutofillGroup(
-          onDisposeAction: AutofillContextAction.cancel,
-          child: Form(
-            key: _form,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _PageIntro(
-                  title: _registering ? 'Buat akun' : 'Masuk lagi',
-                  description: _registering
-                      ? 'Buat profil demo di perangkat ini.'
-                      : 'Gunakan profil demo yang kamu buat di perangkat ini.',
-                ),
-                const SizedBox(height: 24),
-                if (_registering) ...[
-                  TextFormField(
-                    key: const ValueKey('auth-name'),
-                    controller: _name,
-                    enabled: !_busy,
-                    autofillHints: const [AutofillHints.name],
-                    textCapitalization: TextCapitalization.words,
-                    textInputAction: TextInputAction.next,
-                    inputFormatters: [LengthLimitingTextInputFormatter(60)],
-                    decoration: const InputDecoration(
-                      labelText: 'Nama panggilan',
-                    ),
-                    validator: (value) => value!.trim().isEmpty
-                        ? 'Masukkan nama panggilan.'
-                        : null,
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                TextFormField(
-                  key: const ValueKey('auth-email'),
-                  controller: _email,
-                  enabled: !_busy,
-                  autofillHints: const [AutofillHints.email],
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  autocorrect: false,
-                  inputFormatters: [LengthLimitingTextInputFormatter(254)],
-                  decoration: const InputDecoration(
-                    labelText: 'Email demo',
-                    hintText: 'nama@example.com',
-                  ),
-                  validator: (value) => _emailPattern.hasMatch(value!.trim())
-                      ? null
-                      : 'Masukkan email yang valid.',
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  key: const ValueKey('auth-password'),
-                  controller: _password,
-                  enabled: !_busy,
-                  obscureText: _obscured,
-                  autofillHints: [
-                    _registering
-                        ? AutofillHints.newPassword
-                        : AutofillHints.password,
-                  ],
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) => _submit(),
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  inputFormatters: [LengthLimitingTextInputFormatter(128)],
-                  decoration: InputDecoration(
-                    labelText: 'Kata sandi demo',
-                    helperText: _registering ? 'Minimal 8 karakter.' : null,
-                    suffixIcon: IconButton(
-                      tooltip: _obscured
-                          ? 'Tampilkan kata sandi'
-                          : 'Sembunyikan kata sandi',
-                      onPressed: _busy
-                          ? null
-                          : () => setState(() => _obscured = !_obscured),
-                      icon: Icon(
-                        _obscured
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
+        viewKey: ValueKey((_mode, _step)),
+        message: !_registering
+            ? 'Selamat datang kembali!'
+            : switch (_step) {
+                0 => 'Hai! Aku teman belajarmu.',
+                1 => 'Sedikit setiap hari, yuk!',
+                _ => 'Siap menyelam?',
+              },
+        content: _registering && _step < 2
+            ? _setupStep()
+            : AutofillGroup(
+                onDisposeAction: AutofillContextAction.cancel,
+                child: Form(
+                  key: _form,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (_registering) _SetupProgress(step: _step),
+                      _PageIntro(
+                        title: _registering ? 'Simpan profilmu' : 'Masuk lagi',
+                        description: _registering
+                            ? 'Buat profil demo di perangkat ini.'
+                            : 'Gunakan profil demo yang kamu buat di perangkat ini.',
                       ),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value!.trim().isEmpty) return 'Masukkan kata sandi.';
-                    if (_registering && value.length < 8) {
-                      return 'Gunakan minimal 8 karakter.';
-                    }
-                    return null;
-                  },
-                ),
-                if (_error case final error?) ...[
-                  const SizedBox(height: 12),
-                  Semantics(
-                    liveRegion: true,
-                    child: Text(
-                      error,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
+                      const SizedBox(height: 24),
+                      if (_registering) ...[
+                        TextFormField(
+                          key: const ValueKey('auth-name'),
+                          controller: _name,
+                          enabled: !_busy,
+                          autofillHints: const [AutofillHints.name],
+                          textCapitalization: TextCapitalization.words,
+                          textInputAction: TextInputAction.next,
+                          inputFormatters: [
+                            LengthLimitingTextInputFormatter(60),
+                          ],
+                          decoration: const InputDecoration(
+                            labelText: 'Nama panggilan',
+                          ),
+                          validator: (value) => value!.trim().isEmpty
+                              ? 'Masukkan nama panggilan.'
+                              : null,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      TextFormField(
+                        key: const ValueKey('auth-email'),
+                        controller: _email,
+                        enabled: !_busy,
+                        autofillHints: const [AutofillHints.email],
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        autocorrect: false,
+                        inputFormatters: [
+                          LengthLimitingTextInputFormatter(254),
+                        ],
+                        decoration: const InputDecoration(
+                          labelText: 'Email demo',
+                          hintText: 'nama@example.com',
+                        ),
+                        validator: (value) =>
+                            _emailPattern.hasMatch(value!.trim())
+                            ? null
+                            : 'Masukkan email yang valid.',
                       ),
-                    ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        key: const ValueKey('auth-password'),
+                        controller: _password,
+                        enabled: !_busy,
+                        obscureText: _obscured,
+                        autofillHints: [
+                          _registering
+                              ? AutofillHints.newPassword
+                              : AutofillHints.password,
+                        ],
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _submit(),
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        inputFormatters: [
+                          LengthLimitingTextInputFormatter(128),
+                        ],
+                        decoration: InputDecoration(
+                          labelText: 'Kata sandi demo',
+                          helperText: _registering
+                              ? 'Minimal 8 karakter.'
+                              : null,
+                          suffixIcon: IconButton(
+                            tooltip: _obscured
+                                ? 'Tampilkan kata sandi'
+                                : 'Sembunyikan kata sandi',
+                            onPressed: _busy
+                                ? null
+                                : () => setState(() => _obscured = !_obscured),
+                            icon: Icon(
+                              _obscured
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value!.trim().isEmpty) {
+                            return 'Masukkan kata sandi.';
+                          }
+                          if (_registering && value.length < 8) {
+                            return 'Gunakan minimal 8 karakter.';
+                          }
+                          return null;
+                        },
+                      ),
+                      if (_error case final error?) ...[
+                        const SizedBox(height: 12),
+                        Semantics(
+                          liveRegion: true,
+                          child: Text(
+                            error,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 20),
+                      FilledButton(
+                        onPressed: _busy ? null : _submit,
+                        child: Text(_busy ? 'Memproses…' : action),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: _busy ? null : _switchMode,
+                        child: Text(
+                          _registering
+                              ? 'Sudah punya akun? Masuk'
+                              : 'Belum punya akun? Mulai belajar',
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-                const SizedBox(height: 20),
-                FilledButton(
-                  onPressed: _busy ? null : _submit,
-                  child: Text(_busy ? 'Memproses…' : action),
                 ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: _busy ? null : _switchMode,
-                  child: Text(
-                    _registering
-                        ? 'Sudah punya akun? Masuk'
-                        : 'Belum punya akun? Daftar',
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+              ),
       ),
     );
   }
+
+  Widget _setupStep() {
+    final levelStep = _step == 0;
+    final ready = levelStep ? _level != null : _goal != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SetupProgress(step: _step),
+        _PageIntro(
+          title: levelStep
+              ? 'Seberapa kenal bahasa Inggris?'
+              : 'Pilih target harianmu',
+          description: levelStep
+              ? 'Kursus Bahasa Inggris · Unit 1'
+              : 'Target ini dipakai untuk quest harian dan bisa diubah dari Profil.',
+        ),
+        const SizedBox(height: 18),
+        if (levelStep)
+          for (final option in ['Pemula', 'Sudah tahu sedikit'])
+            _SetupChoice(
+              label: option,
+              icon: option == 'Pemula'
+                  ? Icons.waving_hand_outlined
+                  : Icons.chat_bubble_outline_rounded,
+              selected: _level == option,
+              onTap: () => setState(() => _level = option),
+            )
+        else
+          for (final count in [1, 2, 3])
+            _SetupChoice(
+              label: '$count lesson per hari',
+              icon: Icons.flag_outlined,
+              selected: _goal == count,
+              onTap: () => setState(() => _goal = count),
+            ),
+        const SizedBox(height: 12),
+        FilledButton(
+          onPressed: ready ? () => setState(() => _step++) : null,
+          child: const Text('Lanjut'),
+        ),
+        if (levelStep)
+          TextButton(
+            onPressed: _switchMode,
+            child: const Text('Sudah punya akun? Masuk'),
+          ),
+      ],
+    );
+  }
+}
+
+class _SetupProgress extends StatelessWidget {
+  const _SetupProgress({required this.step});
+
+  final int step;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: LinearProgressIndicator(
+      value: (step + 1) / 3,
+      minHeight: 8,
+      borderRadius: BorderRadius.circular(8),
+      semanticsLabel: 'Langkah ${step + 1} dari 3',
+    ),
+  );
+}
+
+class _SetupChoice extends StatelessWidget {
+  const _SetupChoice({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Semantics(
+      selected: selected,
+      child: OutlinedButton.icon(
+        onPressed: onTap,
+        icon: Icon(selected ? Icons.check_circle_rounded : icon),
+        label: Text(label),
+        style: OutlinedButton.styleFrom(
+          alignment: Alignment.centerLeft,
+          backgroundColor: selected ? const Color(0xFFDDEFFE) : Colors.white,
+          side: BorderSide(color: selected ? _blue : _line),
+        ),
+      ),
+    ),
+  );
 }
 
 class _PageLayout extends StatelessWidget {
@@ -350,12 +478,16 @@ class _PageLayout extends StatelessWidget {
     this.onBack,
     this.showBack = false,
     this.compact = false,
+    this.message,
+    this.viewKey,
   });
 
   final Widget content;
   final VoidCallback? onBack;
   final bool showBack;
   final bool compact;
+  final String? message;
+  final Key? viewKey;
 
   @override
   Widget build(BuildContext context) {
@@ -366,6 +498,7 @@ class _PageLayout extends StatelessWidget {
             final wide = constraints.maxWidth >= 840;
             final inset = wide ? 40.0 : 20.0;
             return SingleChildScrollView(
+              key: viewKey,
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: EdgeInsets.fromLTRB(inset, 12, inset, 28),
               child: Center(
@@ -407,7 +540,9 @@ class _PageLayout extends StatelessWidget {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            const Expanded(child: _OceanPanel(height: 480)),
+                            Expanded(
+                              child: _OceanPanel(height: 440, message: message),
+                            ),
                             const SizedBox(width: 58),
                             Expanded(
                               child: Align(
@@ -423,7 +558,10 @@ class _PageLayout extends StatelessWidget {
                           ],
                         )
                       else ...[
-                        _OceanPanel(height: compact ? 142 : 262),
+                        _OceanPanel(
+                          height: compact ? 144 : 262,
+                          message: message,
+                        ),
                         SizedBox(height: compact ? 22 : 28),
                         content,
                       ],
@@ -474,9 +612,10 @@ class _PageIntro extends StatelessWidget {
 }
 
 class _OceanPanel extends StatelessWidget {
-  const _OceanPanel({required this.height});
+  const _OceanPanel({required this.height, this.message});
 
   final double height;
+  final String? message;
 
   @override
   Widget build(BuildContext context) {
@@ -517,15 +656,45 @@ class _OceanPanel extends StatelessWidget {
               right: height * .14,
               child: _Bubble(size: height * .12),
             ),
-            Center(
-              child: Image.asset(
-                'assets/images/shark_mascot.png',
-                height: height * .88,
-                cacheWidth: 720,
-                fit: BoxFit.contain,
-                excludeFromSemantics: true,
-              ),
-            ),
+            if (message case final speech?)
+              Center(
+                child: Flex(
+                  direction: height < 200 ? Axis.horizontal : Axis.vertical,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SharkMascot(
+                      size: height < 200 ? height * .75 : height * .69,
+                    ),
+                    const SizedBox(width: 6, height: 6),
+                    Flexible(
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 10),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 9,
+                            ),
+                            child: Text(
+                              speech,
+                              style: const TextStyle(
+                                color: _ink,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Center(child: SharkMascot(size: height * .85)),
           ],
         ),
       ),

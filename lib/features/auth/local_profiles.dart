@@ -6,10 +6,17 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LearnerProfile {
-  const LearnerProfile({required this.name, required this.email});
+  const LearnerProfile({
+    required this.name,
+    required this.email,
+    this.level = 'Pemula',
+    this.dailyGoal = 1,
+  });
 
   final String name;
   final String email;
+  final String level;
+  final int dailyGoal;
 }
 
 class LocalProfiles {
@@ -19,6 +26,8 @@ class LocalProfiles {
     required String name,
     required String email,
     required String password,
+    String level = 'Pemula',
+    int dailyGoal = 1,
   }) async {
     final normalizedEmail = email.trim().toLowerCase();
     final key = _key(normalizedEmail);
@@ -27,7 +36,12 @@ class LocalProfiles {
     final random = Random.secure();
     final salt = List<int>.generate(16, (_) => random.nextInt(256));
     final verifier = await compute(_deriveVerifier, (password, salt));
-    final profile = LearnerProfile(name: name.trim(), email: normalizedEmail);
+    final profile = LearnerProfile(
+      name: name.trim(),
+      email: normalizedEmail,
+      level: level,
+      dailyGoal: dailyGoal,
+    );
 
     await _preferences.setString(
       key,
@@ -35,6 +49,8 @@ class LocalProfiles {
         'name': profile.name,
         'salt': base64Encode(salt),
         'verifier': base64Encode(verifier),
+        'level': level,
+        'dailyGoal': dailyGoal,
       }),
     );
     return profile;
@@ -59,7 +75,12 @@ class LocalProfiles {
     }
     if (difference != 0) return null;
 
-    return LearnerProfile(name: data['name'] as String, email: normalizedEmail);
+    return LearnerProfile(
+      name: data['name'] as String,
+      email: normalizedEmail,
+      level: data['level'] as String? ?? 'Pemula',
+      dailyGoal: data['dailyGoal'] as int? ?? 1,
+    );
   }
 
   String _key(String email) => 'lingoshark.demoProfile.v1.$email';

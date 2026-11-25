@@ -1,5 +1,9 @@
+import 'package:duolingo_clone/features/auth/auth_flow.dart';
 import 'package:duolingo_clone/features/auth/local_profiles.dart';
+import 'package:duolingo_clone/features/learn/learning_home.dart';
+import 'package:duolingo_clone/features/learn/learning_progress.dart';
 import 'package:duolingo_clone/main.dart';
+import 'package:duolingo_clone/shared/shark_mascot.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -11,21 +15,26 @@ void main() {
         InMemorySharedPreferencesAsync.empty();
   });
 
-  testWidgets('Small screen form validates inputs and switches mode', (
+  testWidgets('Small screen setup leads to form validation and sign-in', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(320, 568));
     addTearDown(() => tester.binding.setSurfaceSize(null));
+    _reduceMotion(tester);
     await tester.pumpWidget(const DuolingoCloneApp());
 
-    final register = find.widgetWithText(FilledButton, 'Buat akun');
-    await tester.ensureVisible(register);
-    await tester.tap(register);
-    await tester.pumpAndSettle();
-
-    await tester.ensureVisible(register);
-    await tester.tap(register);
-    await tester.pumpAndSettle();
+    await _tap(tester, 'Mulai belajar');
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Lanjut'))
+          .onPressed,
+      isNull,
+    );
+    await _tap(tester, 'Pemula');
+    await _tap(tester, 'Lanjut');
+    await _tap(tester, '1 lesson per hari');
+    await _tap(tester, 'Lanjut');
+    await _tap(tester, 'Buat akun');
     expect(find.text('Masukkan email yang valid.'), findsOneWidget);
     expect(find.text('Masukkan nama panggilan.'), findsOneWidget);
 
@@ -37,24 +46,129 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byTooltip('Sembunyikan kata sandi'), findsOneWidget);
 
-    final switchMode = find.text('Sudah punya akun? Masuk');
-    await tester.ensureVisible(switchMode);
-    await tester.tap(switchMode);
-    await tester.pumpAndSettle();
+    await _tap(tester, 'Sudah punya akun? Masuk');
     expect(find.byKey(const ValueKey('auth-name')), findsNothing);
     expect(find.text('Masuk lagi'), findsOneWidget);
     expect(tester.widget<TextFormField>(password).controller!.text, isEmpty);
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('The shark moves and respects reduced motion', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(body: Center(child: SharkMascot(size: 120))),
+      ),
+    );
+    final transform = find
+        .descendant(
+          of: find.byType(SharkMascot),
+          matching: find.byType(Transform),
+        )
+        .first;
+    await tester.pump();
+    final still = tester.widget<Transform>(transform).transform.clone();
+    await tester.pump(const Duration(milliseconds: 1200));
+    expect(tester.widget<Transform>(transform).transform, isNot(still));
+
+    _reduceMotion(tester);
+    await tester.pumpAndSettle();
+    expect(tester.widget<Transform>(transform).transform, still);
+  });
+
+  testWidgets('A full lesson unlocks the next stop and funds a quest reward', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    _reduceMotion(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: lingoSharkTheme(),
+        home: LearningHome(
+          profile: const LearnerProfile(
+            name: 'Nara',
+            email: 'nara@example.com',
+          ),
+          onSignOut: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Jalur belajar'), findsOneWidget);
+    expect(
+      tester
+          .widget<ListTile>(find.widgetWithText(ListTile, 'Perkenalkan diri'))
+          .onTap,
+      isNull,
+    );
+    await _tap(tester, 'Sapa seseorang');
+
+    for (final answers in [
+      ['Selamat pagi'],
+      ['How', 'are', 'you'],
+      ['Hello', 'Halo', 'Thanks', 'Terima kasih', 'Goodbye', 'Sampai jumpa'],
+      ['Nice to meet you'],
+      ['See', 'you', 'tomorrow'],
+    ]) {
+      for (final answer in answers) {
+        await _tap(tester, answer);
+      }
+      await _tap(tester, 'Periksa jawaban');
+      expect(find.text('Tepat sekali!'), findsOneWidget);
+      await _tap(tester, 'Lanjut');
+    }
+    expect(find.text('100% akurat · +15 XP'), findsOneWidget);
+    await _tap(tester, 'Kembali ke belajar');
+    expect(
+      tester
+          .widget<ListTile>(find.widgetWithText(ListTile, 'Perkenalkan diri'))
+          .onTap,
+      isNotNull,
+    );
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.byIcon(Icons.flag_rounded),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _tap(tester, 'Klaim hadiah');
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Sudah diklaim'),
+          )
+          .onPressed,
+      isNull,
+    );
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.byIcon(Icons.storefront_rounded),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _tap(tester, 'Beli · 25 gems');
+    expect(find.text('Saldo kamu: 0 gems.'), findsOneWidget);
+    final persisted = await ProgressStore('nara@example.com').load();
+    expect(persisted.xp, 15);
+    expect(persisted.completed, {'greetings'});
+    expect(persisted.freezes, 1);
+    expect(tester.takeException(), isNull);
+  });
+
   test(
-    'Demo account can be reloaded and rejects invalid credentials',
+    'Demo account reload preserves setup and rejects invalid credentials',
     () async {
       final profiles = LocalProfiles();
       final created = await profiles.register(
         name: 'Nara',
         email: 'NARA@example.com',
         password: 'latihan123',
+        dailyGoal: 2,
+        level: 'Sudah tahu sedikit',
       );
       expect(created?.name, 'Nara');
       expect(created?.email, 'nara@example.com');
@@ -77,6 +191,33 @@ void main() {
         password: 'latihan123',
       );
       expect(signedIn?.name, 'Nara');
+      expect(signedIn?.dailyGoal, 2);
+      expect(signedIn?.level, 'Sudah tahu sedikit');
     },
   );
+
+  test('Repeat practice preserves XP and a freeze covers one missed day', () {
+    final progress = const LearningProgress(freezes: 1)
+        .finish('greetings', true, 20)
+        .finish('greetings', true, 20)
+        .finish('intro', false, 22);
+    expect(progress.streak, 2);
+    expect(progress.xp, 25);
+    expect(progress.freezes, 0);
+    expect(progress.lessonsOn(22), 1);
+    expect(progress.activeStreak(24), 0);
+  });
+}
+
+void _reduceMotion(WidgetTester tester) {
+  tester.platformDispatcher.accessibilityFeaturesTestValue =
+      const FakeAccessibilityFeatures(disableAnimations: true);
+  addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+}
+
+Future<void> _tap(WidgetTester tester, String label) async {
+  final target = find.text(label);
+  await tester.ensureVisible(target);
+  await tester.tap(target);
+  await tester.pumpAndSettle();
 }
