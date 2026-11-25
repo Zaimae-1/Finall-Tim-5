@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'features/auth/auth_flow.dart';
+
 void main() => runApp(const DuolingoCloneApp());
 
 class DuolingoCloneApp extends StatelessWidget {
@@ -8,39 +10,10 @@ class DuolingoCloneApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Duolingo Clone - Tim 5',
+      title: 'LingoShark',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF58CC02)),
-        useMaterial3: true,
-      ),
-      home: const Scaffold(
-        body: SafeArea(
-          child: Center(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.school_rounded, size: 64),
-                  SizedBox(height: 20),
-                  Text(
-                    'Duolingo Clone',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 8),
-                  Text('Final Project - Tim 5'),
-                  SizedBox(height: 20),
-                  Text(
-                    'Setup Flutter siap. Fitur belajar akan dikembangkan bersama sesuai README.',
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+      theme: lingoSharkTheme(),
+      home: const AuthFlow(),
     );
   }
 }

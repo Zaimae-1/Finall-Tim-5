@@ -4,7 +4,9 @@ Final project sekolah Tim 5 menggunakan Flutter. Tujuannya membuat ulang tampila
 
 ## Status saat ini
 
-**Baru setup awal**, belum implementasi clone. Sudah tersedia proyek Flutter untuk Android, iOS, dan web, halaman pembuka sederhana, serta smoke test. Semua fitur di checklist berikut masih rencana, bukan fitur yang sudah selesai.
+Halaman sambutan, masuk, dan daftar profil demo sudah berjalan dengan tema biru dan maskot hiu orisinal. Nama aplikasi sementara adalah **LingoShark**. Onboarding kursus dan fitur belajar masih dalam rencana.
+
+Untuk mencoba alur akun, daftar dengan data contoh seperti `nama@example.com` dan buat kata sandi demo. Coba keluar, lalu masuk lagi dengan data yang sama. Profil disimpan di perangkat atau browser yang dipakai, dan sesi berakhir saat aplikasi ditutup. Gunakan kredensial khusus demo.
 
 Android adalah target utama tugas karena aplikasi referensinya dari Play Store. Web disediakan untuk memudahkan preview di laptop. iOS hanya bisa dibangun menggunakan macOS dan Xcode.
 
@@ -29,11 +31,11 @@ Alur demo: **Welcome → onboarding → profil → Home → lesson → hasil →
 ## Aturan perilaku dan batasan
 
 - Semua navigasi dan tombol yang ditampilkan harus memiliki fungsi jelas. Fitur belum tersedia ditandai, bukan tombol kosong.
-- Gunakan data lokal terlebih dahulu. Progres, profil, XP, gems, dan quest harus tetap ada setelah aplikasi ditutup; penyimpanan ini belum dipasang pada starter.
+- Profil demo sudah tersimpan secara lokal. Saat fitur belajar diimplementasikan, progres, XP, gems, dan quest juga perlu tetap ada setelah aplikasi ditutup.
 - Streak bertambah sekali per hari saat minimal satu lesson selesai, bukan setiap menyelesaikan soal atau mengulang lesson di hari yang sama.
 - Hadiah penyelesaian pertama hanya diberikan sekali per lesson. Tentukan aturan XP latihan ulang sebelum implementasi agar tidak ada penghitungan ganda.
 - Untuk cakupan awal gunakan **Hearts**: mulai dengan 5 hati; jawaban salah mengurangi satu; saat habis tampilkan pilihan keluar atau latihan pemulihan. Energy adalah versi lain Duolingo dan tidak dicampur dengan aturan Hearts.
-- Warna, tipografi, ilustrasi, tombol, jalur lesson, dan feedback mengikuti satu versi referensi Android yang disepakati. Simpan screenshot acuan saat implementasi agar desain anggota konsisten.
+- Gunakan tema biru LingoShark dan maskot hiu buatan proyek. Gunakan Duolingo sebagai referensi alur dan fitur, lalu sesuaikan susunan layar dan komponen dengan identitas LingoShark.
 - Buat layout aman di layar ponsel kecil, teks terbaca, dan halaman bisa di-scroll bila perlu.
 - Gunakan soal dan kalimat buatan tim. Catat sumber/lisensi aset yang dipakai; jangan mengunggah data akun pribadi atau menganggap aset merek sebagai milik tim.
 - Tidak termasuk tahap awal: backend, login Google asli, multiplayer realtime, pembayaran, iklan, AI conversation, penilaian suara, serta kursus musik/catur. Listening bisa ditambahkan setelah fitur inti selesai.
@@ -119,8 +121,10 @@ git push -u origin feat/nama-fitur
 ## Struktur proyek
 
 ```text
-lib/main.dart          Entry point dan halaman starter
-test/widget_test.dart  Smoke test halaman starter
+lib/main.dart          Entry point dan tema aplikasi
+lib/features/auth/     Layar akun dan penyimpanan profil demo
+assets/images/         Ilustrasi maskot hiu
+test/widget_test.dart  Tes form dan profil demo
 android/               Project runner Android
 ios/                   Project runner iOS
 web/                   Project runner web

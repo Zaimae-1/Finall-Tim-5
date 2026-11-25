@@ -1,11 +1,11 @@
 {
-    "name": "duolingo_clone",
-    "short_name": "duolingo_clone",
+    "name": "LingoShark",
+    "short_name": "LingoShark",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "Final project sekolah Tim 5: clone fitur inti Duolingo.",
+    "background_color": "#F7FBFF",
+    "theme_color": "#075DAB",
+    "description": "LingoShark, proyek belajar bahasa Inggris dari Tim 5.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
