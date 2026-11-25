@@ -578,65 +578,70 @@ class _CourseBanner extends StatelessWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final art = (constraints.maxWidth * .39).clamp(92.0, 210.0);
-          return Stack(
-            children: [
-              Positioned(
-                right: -art * .07,
-                bottom: -art * .18,
-                child: Container(
-                  width: art * 1.28,
-                  height: art * 1.28,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0x224DC5F5),
-                    border: Border.all(
-                      color: const Color(0x55A9E8FF),
-                      width: 2,
+          final art = (constraints.maxWidth * .36).clamp(88.0, 176.0);
+          const artInset = 12.0;
+          return ConstrainedBox(
+            constraints: BoxConstraints(minHeight: art + artInset * 2),
+            child: Stack(
+              alignment: Alignment.centerLeft,
+              children: [
+                Positioned(
+                  right: -art * .07,
+                  bottom: -art * .18,
+                  child: Container(
+                    width: art * 1.28,
+                    height: art * 1.28,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0x224DC5F5),
+                      border: Border.all(
+                        color: const Color(0x55A9E8FF),
+                        width: 2,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Positioned(
-                right: 7,
-                top: 0,
-                bottom: 0,
-                child: Center(
-                  child: SharkMascot(size: art, animate: animateMascot),
+                Positioned(
+                  right: artInset,
+                  top: artInset,
+                  bottom: artInset,
+                  child: Center(
+                    child: SharkMascot(size: art, animate: animateMascot),
+                  ),
                 ),
-              ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(20, 23, art + 14, 25),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Percakapan pertama',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 26,
-                        height: 1.05,
-                        letterSpacing: -.6,
+                Padding(
+                  padding: EdgeInsets.fromLTRB(20, 22, art + artInset * 2, 22),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Percakapan pertama',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 26,
+                          height: 1.05,
+                          letterSpacing: -.6,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      'Sapa, kenalan, lalu pesan makanan.',
-                      style: TextStyle(color: Color(0xFFDAF2FF), height: 1.4),
-                    ),
-                    const SizedBox(height: 13),
-                    Text(
-                      '$finished / ${lessons.length} lesson selesai',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
+                      const SizedBox(height: 10),
+                      const Text(
+                        'Sapa, kenalan, lalu pesan makanan.',
+                        style: TextStyle(color: Color(0xFFDAF2FF), height: 1.4),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 13),
+                      Text(
+                        '$finished / ${lessons.length} lesson selesai',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),

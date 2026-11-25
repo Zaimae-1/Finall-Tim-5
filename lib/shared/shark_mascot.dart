@@ -108,86 +108,92 @@ class _SharkMascotState extends State<SharkMascot>
   Widget build(BuildContext context) {
     return ExcludeSemantics(
       child: RepaintBoundary(
-        child: SizedBox.square(
-          dimension: widget.size,
-          child: AnimatedBuilder(
-            animation: _ticks,
-            builder: (context, _) {
-              final phase = _idle.value * math.pi * 2;
-              final swim = math.sin(phase);
-              final t = _reaction.value;
-              final beat = math.sin(math.pi * t);
-              final (lift, tilt, extraFin, scale) = switch (widget.mood) {
-                SharkMood.greet => (
-                  .035 * beat,
-                  -.08 * beat,
-                  .85 * beat * math.sin(t * 5 * math.pi),
-                  1.0,
-                ),
-                SharkMood.correct => (
-                  .13 * beat,
-                  .24 * beat * math.sin(t * 2 * math.pi),
-                  .70 * beat,
-                  1 + .08 * beat,
-                ),
-                SharkMood.encourage => (
-                  -.05 * beat,
-                  -.18 * beat,
-                  .32 * beat,
-                  1 - .035 * beat,
-                ),
-                SharkMood.celebrate => (
-                  .13 * beat,
-                  -2 * math.pi * Curves.easeInOutCubic.transform(t),
-                  .8 * beat,
-                  1 + .05 * beat,
-                ),
-                SharkMood.swim => (0.0, 0.0, 0.0, 1.0),
-              };
-              final blink = (1 - (_idle.value - .57).abs() / .038).clamp(
-                0.0,
-                1.0,
-              );
-              final rig = _rig;
-
-              return Stack(
-                clipBehavior: Clip.none,
-                fit: StackFit.expand,
-                children: [
-                  if (_motionEnabled &&
-                      widget.mood == SharkMood.celebrate &&
-                      t > 0 &&
-                      t < 1)
-                    CustomPaint(painter: _Bubbles(t)),
-                  Transform.translate(
-                    offset: Offset(
-                      swim * widget.size * .045,
-                      -(swim * .042 + lift) * widget.size,
-                    ),
-                    child: Transform.rotate(
-                      angle: swim * .08 + tilt,
-                      child: Transform.scale(
-                        scale: scale,
-                        child: rig != null && _motionEnabled
-                            ? CustomPaint(
-                                painter: _SharkPose(
-                                  rig: rig,
-                                  tail: math.sin(phase * 2),
-                                  fin:
-                                      math.sin(phase * 2 + .8) * .34 + extraFin,
-                                  blink: blink * .96,
-                                ),
-                              )
-                            : const Image(image: _asset, fit: BoxFit.contain),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final size = math.min(
+              widget.size,
+              constraints.biggest.shortestSide,
+            );
+            return Center(
+              widthFactor: 1,
+              heightFactor: 1,
+              child: SizedBox.square(dimension: size, child: _buildPose(size)),
+            );
+          },
         ),
       ),
+    );
+  }
+
+  Widget _buildPose(double size) {
+    return AnimatedBuilder(
+      animation: _ticks,
+      builder: (context, _) {
+        final phase = _idle.value * math.pi * 2;
+        final swim = math.sin(phase);
+        final t = _reaction.value;
+        final beat = math.sin(math.pi * t);
+        final (lift, tilt, extraFin, scale) = switch (widget.mood) {
+          SharkMood.greet => (
+            .035 * beat,
+            -.08 * beat,
+            .85 * beat * math.sin(t * 5 * math.pi),
+            1.0,
+          ),
+          SharkMood.correct => (
+            .13 * beat,
+            .24 * beat * math.sin(t * 2 * math.pi),
+            .70 * beat,
+            1 + .08 * beat,
+          ),
+          SharkMood.encourage => (
+            -.05 * beat,
+            -.18 * beat,
+            .32 * beat,
+            1 - .035 * beat,
+          ),
+          SharkMood.celebrate => (
+            .13 * beat,
+            -2 * math.pi * Curves.easeInOutCubic.transform(t),
+            .8 * beat,
+            1 + .05 * beat,
+          ),
+          SharkMood.swim => (0.0, 0.0, 0.0, 1.0),
+        };
+        final blink = (1 - (_idle.value - .57).abs() / .038).clamp(0.0, 1.0);
+        final rig = _rig;
+
+        return Stack(
+          clipBehavior: Clip.none,
+          fit: StackFit.expand,
+          children: [
+            if (_motionEnabled &&
+                widget.mood == SharkMood.celebrate &&
+                t > 0 &&
+                t < 1)
+              CustomPaint(painter: _Bubbles(t)),
+            Transform.translate(
+              offset: Offset(swim * size * .045, -(swim * .042 + lift) * size),
+              child: Transform.rotate(
+                angle: swim * .08 + tilt,
+                child: Transform.scale(
+                  scale: scale,
+                  child: rig != null && _motionEnabled
+                      ? CustomPaint(
+                          painter: _SharkPose(
+                            rig: rig,
+                            tail: math.sin(phase * 2),
+                            fin: math.sin(phase * 2 + .8) * .34 + extraFin,
+                            blink: blink * .96,
+                          ),
+                        )
+                      : const Image(image: _asset, fit: BoxFit.contain),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -78,6 +78,30 @@ void main() {
     expect(tester.widget<Transform>(transform).transform, still);
   });
 
+  testWidgets('A short banner keeps the shark pose square and centered', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 220,
+              height: 136,
+              child: SharkMascot(size: 200, animate: false),
+            ),
+          ),
+        ),
+      ),
+    );
+    final mascot = find.byType(SharkMascot);
+    final pose = find
+        .descendant(of: mascot, matching: find.byType(Transform))
+        .first;
+    expect(tester.getSize(pose), const Size.square(136));
+    expect(tester.getCenter(pose), tester.getCenter(mascot));
+  });
+
   testWidgets('A full lesson unlocks the next stop and funds a quest reward', (
     tester,
   ) async {
