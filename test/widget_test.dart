@@ -196,6 +196,58 @@ void main() {
     },
   );
 
+  testWidgets(
+    'Bottom tabs work on desktop and leave room to scroll on phones',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      _reduceMotion(tester);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: lingoSharkTheme(),
+          home: LearningHome(
+            profile: const LearnerProfile(
+              name: 'Nara',
+              email: 'nara@example.com',
+            ),
+            onSignOut: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final tabs = find.byType(NavigationBar);
+      expect(tester.getRect(tabs).bottom, greaterThan(760));
+      expect(tester.getCenter(tabs).dx, closeTo(640, 1));
+      expect(
+        find.descendant(of: tabs, matching: find.byType(NavigationDestination)),
+        findsNWidgets(5),
+      );
+
+      await tester.tap(
+        find.descendant(of: tabs, matching: find.byIcon(Icons.person_rounded)),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.widget<NavigationBar>(tabs).selectedIndex, 4);
+      expect(find.text('Profil pelajar'), findsOneWidget);
+
+      await tester.binding.setSurfaceSize(const Size(320, 568));
+      await tester.pumpAndSettle();
+      final signOut = find.widgetWithText(OutlinedButton, 'Keluar');
+      await tester.scrollUntilVisible(
+        signOut,
+        140,
+        scrollable: find.byType(Scrollable),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.getRect(signOut).bottom,
+        lessThan(tester.getRect(tabs).top),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   test('Repeat practice preserves XP and a freeze covers one missed day', () {
     final progress = const LearningProgress(freezes: 1)
         .finish('greetings', true, 20)

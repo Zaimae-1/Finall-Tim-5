@@ -5,6 +5,7 @@ import '../../shared/shark_mascot.dart';
 import '../auth/local_profiles.dart';
 import 'course.dart';
 import 'learning_progress.dart';
+import 'learning_tab_bar.dart';
 import 'lesson_page.dart';
 
 const _navy = Color(0xFF103552);
@@ -167,157 +168,85 @@ class _LearningHomeState extends State<LearningHome> {
               _Destination.profile => _profile(progress, name, goal, day),
             };
             return Scaffold(
+              extendBody: true,
               backgroundColor: const Color(0xFFF3F8FC),
-              appBar: wide
-                  ? null
-                  : AppBar(
-                      title: const _Brand(),
-                      actions: [
-                        _Metric(
-                          icon: Icons.local_fire_department_rounded,
-                          value: '${progress.activeStreak(day)}',
-                          label: 'hari streak',
-                          color: _coral,
-                        ),
-                        const SizedBox(width: 12),
-                        _Metric(
-                          icon: Icons.diamond_rounded,
-                          value: '${progress.gems}',
-                          label: 'gems',
-                          color: _blue,
-                        ),
-                        const SizedBox(width: 16),
-                      ],
+              appBar: AppBar(
+                title: const _Brand(),
+                actions: [
+                  _Metric(
+                    icon: Icons.local_fire_department_rounded,
+                    value: '${progress.activeStreak(day)}',
+                    label: 'hari streak',
+                    color: _coral,
+                  ),
+                  const SizedBox(width: 12),
+                  _Metric(
+                    icon: Icons.diamond_rounded,
+                    value: '${progress.gems}',
+                    label: 'gems',
+                    color: _blue,
+                  ),
+                  const SizedBox(width: 16),
+                ],
+              ),
+              bottomNavigationBar: LearningTabBar(
+                selectedIndex: _tab.index,
+                onSelected: (index) =>
+                    setState(() => _tab = _Destination.values[index]),
+                destinations: [
+                  for (final page in _Destination.values)
+                    NavigationDestination(
+                      icon: Icon(page.icon),
+                      label: page.label,
                     ),
-              bottomNavigationBar: wide
-                  ? null
-                  : NavigationBar(
-                      selectedIndex: _tab.index,
-                      labelBehavior:
-                          NavigationDestinationLabelBehavior.onlyShowSelected,
-                      onDestinationSelected: (index) =>
-                          setState(() => _tab = _Destination.values[index]),
-                      destinations: [
-                        for (final page in _Destination.values)
-                          NavigationDestination(
-                            icon: Icon(page.icon),
-                            label: page.label,
-                          ),
-                      ],
-                    ),
+                ],
+              ),
               body: SafeArea(
-                child: Row(
-                  children: [
-                    if (wide) _rail(progress, day),
-                    Expanded(
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: showAside ? 1040 : 704,
-                          ),
-                          child: ListView(
-                            key: ValueKey(_tab),
-                            padding: EdgeInsets.fromLTRB(
-                              wide ? 32 : 16,
-                              wide ? 34 : 12,
-                              wide ? 32 : 16,
-                              28,
-                            ),
-                            children: showAside
-                                ? [
-                                    Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.stretch,
-                                            children: content,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 22),
-                                        SizedBox(
-                                          width: 250,
-                                          child: _questCard(
-                                            progress,
-                                            goal,
-                                            day,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ]
-                                : content,
-                          ),
+                bottom: false,
+                child: Builder(
+                  builder: (context) => Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: showAside ? 1040 : 704,
+                      ),
+                      child: ListView(
+                        key: ValueKey(_tab),
+                        padding: EdgeInsets.fromLTRB(
+                          wide ? 32 : 16,
+                          wide ? 28 : 12,
+                          wide ? 32 : 16,
+                          MediaQuery.paddingOf(context).bottom + 16,
                         ),
+                        children: showAside
+                            ? [
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: content,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 22),
+                                    SizedBox(
+                                      width: 250,
+                                      child: _questCard(progress, goal, day),
+                                    ),
+                                  ],
+                                ),
+                              ]
+                            : content,
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             );
           },
         );
       },
-    );
-  }
-
-  Widget _rail(LearningProgress progress, int day) {
-    return Container(
-      width: 194,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(right: BorderSide(color: _outline)),
-      ),
-      child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 30),
-        children: [
-          const Padding(padding: EdgeInsets.only(left: 6), child: _Brand()),
-          const SizedBox(height: 31),
-          for (final page in _Destination.values)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: ListTile(
-                selected: _tab == page,
-                selectedColor: _blue,
-                selectedTileColor: _ice,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(13),
-                ),
-                leading: Icon(page.icon),
-                title: Text(
-                  page.label,
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-                onTap: () => setState(() => _tab = page),
-              ),
-            ),
-          const SizedBox(height: 22),
-          const Divider(color: _outline),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 12, 4, 0),
-            child: Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                _Metric(
-                  icon: Icons.local_fire_department_rounded,
-                  value: '${progress.activeStreak(day)}',
-                  label: 'hari streak',
-                  color: _coral,
-                ),
-                _Metric(
-                  icon: Icons.diamond_rounded,
-                  value: '${progress.gems}',
-                  label: 'gems',
-                  color: _blue,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -787,16 +716,18 @@ class _Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: _outline),
+    return Material(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        side: const BorderSide(color: _outline),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: children,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: children,
+        ),
       ),
     );
   }
