@@ -121,4 +121,59 @@ const lessons = [
       [1, 3, 2, 0],
     ),
   ]),
+  Lesson('directions', 'Cari arah', 'Menemukan jalan di kota', [
+    Exercise.choice('Apa arti “Turn left”?', [
+      'Belok kiri',
+      'Belok kanan',
+      'Jalan lurus',
+    ], 0),
+    Exercise.order(
+      'Susun “Di mana stasiunnya?”',
+      ['the', 'Where', 'station', 'is'],
+      [1, 3, 0, 2],
+    ),
+    Exercise.match(['Left', 'Right', 'Straight'], ['Lurus', 'Kiri', 'Kanan'], [
+      1,
+      2,
+      0,
+    ]),
+    Exercise.choice('Apa arti “Go straight”?', [
+      'Berhenti',
+      'Jalan lurus',
+      'Naik kapal',
+    ], 1),
+    Exercise.order('Susun “Belok kanan.”', ['right', 'Turn', 'left'], [1, 0]),
+  ]),
+  Lesson(
+    'treasure',
+    'Pulau harta karun',
+    'Ulangi kosakata dan buka peti bonus',
+    [
+      Exercise.choice('Apa arti “Treasure”?', [
+        'Perjalanan',
+        'Harta karun',
+        'Pulau',
+      ], 1),
+      Exercise.match(['Island', 'Boat', 'Map'], ['Peta', 'Pulau', 'Kapal'], [
+        1,
+        2,
+        0,
+      ]),
+      Exercise.order(
+        'Susun “Temukan pulau itu.”',
+        ['island', 'Find', 'the', 'boat'],
+        [1, 2, 0],
+      ),
+      Exercise.choice('Apa arti “Open the chest”?', [
+        'Buka peti',
+        'Tutup pintu',
+        'Cari peta',
+      ], 0),
+      Exercise.order(
+        'Susun “Ini harta karunku.”',
+        ['treasure', 'This', 'my', 'is'],
+        [1, 3, 2, 0],
+      ),
+    ],
+  ),
 ];

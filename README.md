@@ -4,7 +4,7 @@ Final project sekolah Tim 5 menggunakan Flutter. Tujuannya membuat ulang tampila
 
 ## Status saat ini
 
-**LingoShark** sudah punya layar sambutan, masuk, dan onboarding untuk profil demo. Setelah masuk, buka jalur **Belajar** untuk memainkan tiga lesson Bahasa Inggris. Setiap lesson berisi lima soal pilihan ganda, susun kata, atau pasangan kata. Quest, Toko, dan Profil memakai progres akun yang sama. Peringkat memakai contoh peserta dan XP kamu.
+**LingoShark** sudah punya layar sambutan, masuk, dan onboarding untuk profil demo. Setelah masuk, buka jalur **Belajar** untuk memainkan lima lesson Bahasa Inggris. Setiap lesson berisi lima soal pilihan ganda, susun kata, atau pasangan kata. Peta laut dimulai dari level 1 di bawah dan naik menuju level 5. Kapal bergerak mengikuti ombak; pada setiap level kelipatan 5 muncul pulau dengan pohon kelapa yang bergoyang dan peti harta karun. Penyelesaian pertama level pulau memberi bonus 250 XP di samping XP lesson biasa. Quest, Toko, dan Profil memakai progres akun yang sama. Peringkat memakai contoh peserta dan XP kamu.
 
 Untuk demo, pilih **Mulai belajar**, isi level dan target harian, lalu daftar dengan data contoh seperti `nama@example.com`. Coba selesaikan satu lesson, keluar dari Profil, lalu masuk lagi dengan data yang sama. Profil dan progres disimpan di perangkat atau browser yang dipakai. Sesi berakhir saat aplikasi ditutup. Gerakan hiu bisa dimatikan dari Profil dan mengikuti preferensi pengurangan animasi perangkat.
 
@@ -12,7 +12,7 @@ Android adalah target utama tugas karena aplikasi referensinya dari Play Store. 
 
 ## Cakupan yang dikerjakan
 
-Fokus awal: satu kursus **bahasa Inggris untuk pengguna berbahasa Indonesia**, minimal 1 unit berisi 3 lesson, masing-masing minimal 5 soal. Angka ini adalah usulan batas minimum tim, bukan ketentuan resmi guru; sesuaikan jika ada rubrik sekolah.
+Fokus awal: satu kursus **bahasa Inggris untuk pengguna berbahasa Indonesia**, dengan 5 lesson aktif, masing-masing 5 soal. Angka ini adalah cakupan proyek tim, bukan ketentuan resmi guru; sesuaikan jika ada rubrik sekolah.
 
 | Halaman | Perilaku yang harus berfungsi |
 | --- | --- |
@@ -33,7 +33,7 @@ Alur demo: **Welcome → onboarding → profil → Home → lesson → hasil →
 - Semua navigasi dan tombol yang ditampilkan harus memiliki fungsi jelas. Fitur belum tersedia ditandai, bukan tombol kosong.
 - Profil, progres lesson, XP, gems, dan quest tersimpan secara lokal per akun demo.
 - Streak bertambah sekali per hari saat minimal satu lesson selesai, bukan setiap menyelesaikan soal atau mengulang lesson di hari yang sama.
-- XP dan gems penyelesaian pertama diberikan sekali per lesson. Latihan ulang tetap bisa dihitung untuk quest harian.
+- XP dan gems penyelesaian pertama diberikan sekali per lesson. Setiap level kelipatan 5 memberi bonus 250 XP pada penyelesaian pertama saja. Latihan ulang tetap bisa dihitung untuk quest harian.
 - Lesson dimulai dengan lima hati. Jawaban salah mengurangi satu hati. Jika hati habis, pemain bisa ulang dari awal atau kembali ke jalur belajar.
 - Gunakan tema biru LingoShark dan maskot hiu buatan proyek. Gunakan Duolingo sebagai referensi alur dan fitur, lalu sesuaikan susunan layar dan komponen dengan identitas LingoShark.
 - Buat layout aman di layar ponsel kecil, teks terbaca, dan halaman bisa di-scroll bila perlu.

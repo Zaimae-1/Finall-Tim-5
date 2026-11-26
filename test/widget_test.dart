@@ -4,6 +4,8 @@ import 'package:duolingo_clone/features/auth/auth_flow.dart';
 import 'package:duolingo_clone/features/auth/local_profiles.dart';
 import 'package:duolingo_clone/features/learn/learning_home.dart';
 import 'package:duolingo_clone/features/learn/learning_progress.dart';
+import 'package:duolingo_clone/features/learn/learning_path.dart';
+import 'package:duolingo_clone/features/learn/course.dart';
 import 'package:duolingo_clone/features/learn/learning_tab_bar.dart';
 import 'package:duolingo_clone/main.dart';
 import 'package:duolingo_clone/shared/shark_mascot.dart';
@@ -128,6 +130,8 @@ void main() {
           .onTap,
       isNull,
     );
+    await tester.drag(find.byType(ListView).first, const Offset(0, -430));
+    await tester.pumpAndSettle();
     await _tap(tester, 'Sapa seseorang');
 
     for (final answers in [
@@ -358,6 +362,46 @@ void main() {
     expect(progress.freezes, 0);
     expect(progress.lessonsOn(22), 1);
     expect(progress.activeStreak(24), 0);
+  });
+
+  test('Treasure island grants 250 bonus XP only on first completion', () {
+    expect(lessons.length, greaterThanOrEqualTo(5));
+    final fifth = lessons[4];
+    final first = const LearningProgress().finish(fifth.id, true, 20, level: 5);
+    expect(first.xp, 265);
+    final repeat = first.finish(fifth.id, true, 20, level: 5);
+    expect(repeat.xp, 265);
+    expect(LearningProgress.fromJson(repeat.toJson()).xp, 265);
+    expect(const LearningProgress().rewardXp('future', false, level: 10), 260);
+  });
+
+  testWidgets('The sea map rises from boat level 1 to island level 5', (
+    tester,
+  ) async {
+    _reduceMotion(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LearningPath(
+            lessons: lessons,
+            completed: const {},
+            animate: true,
+            onOpen: (_) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Peta petualangan'), findsOneWidget);
+    expect(find.bySemanticsLabel('Kapal level 1'), findsOneWidget);
+    expect(find.bySemanticsLabel('Pulau harta karun level 5'), findsOneWidget);
+    expect(
+      tester
+          .widget<ListTile>(find.widgetWithText(ListTile, 'Pulau harta karun'))
+          .onTap,
+      isNull,
+    );
+    expect(tester.takeException(), isNull);
   });
 }
 

@@ -6,6 +6,7 @@ import '../../shared/shark_mascot.dart';
 import '../auth/local_profiles.dart';
 import 'course.dart';
 import 'learning_progress.dart';
+import 'learning_path.dart';
 import 'learning_tab_bar.dart';
 import 'lesson_page.dart';
 
@@ -88,9 +89,16 @@ class _LearningHomeState extends State<LearningHome> {
             animateMascot: progress.motion,
             onComplete: (perfect) async {
               final current = _progress ?? progress;
-              final xp = current.rewardXp(lesson.id, perfect);
+              final level =
+                  lessons.indexWhere((entry) => entry.id == lesson.id) + 1;
+              final xp = current.rewardXp(lesson.id, perfect, level: level);
               await _save(
-                current.finish(lesson.id, perfect, localDay(DateTime.now())),
+                current.finish(
+                  lesson.id,
+                  perfect,
+                  localDay(DateTime.now()),
+                  level: level,
+                ),
               );
               return xp;
             },
@@ -176,7 +184,9 @@ class _LearningHomeState extends State<LearningHome> {
             };
             return Scaffold(
               extendBody: true,
-              backgroundColor: const Color(0xFFF3F8FC),
+              backgroundColor: _tab == _Destination.learn
+                  ? const Color(0xFFB8EAF4)
+                  : const Color(0xFFF3F8FC),
               appBar: AppBar(
                 title: const _Brand(),
                 actions: [
@@ -275,103 +285,18 @@ class _LearningHomeState extends State<LearningHome> {
       const SizedBox(height: 18),
       _CourseBanner(finished: finished, animateMascot: progress.motion),
       const SizedBox(height: 25),
-      for (var i = 0; i < lessons.length; i++)
-        _lessonStop(
-          lessons[i],
-          i,
-          progress,
-          unlocked: i == 0 || progress.completed.contains(lessons[i - 1].id),
-        ),
+      LearningPath(
+        lessons: lessons,
+        completed: progress.completed,
+        animate: progress.motion,
+        recentlyCompleted: _recentlyCompleted,
+        onOpen: (lesson) => _openLesson(lesson, progress),
+      ),
       if (!showAside) ...[
         const SizedBox(height: 24),
         _questCard(progress, goal, day),
       ],
     ];
-  }
-
-  Widget _lessonStop(
-    Lesson lesson,
-    int index,
-    LearningProgress progress, {
-    required bool unlocked,
-  }) {
-    final done = progress.completed.contains(lesson.id);
-    final icon = done
-        ? Icons.check_rounded
-        : unlocked
-        ? Icons.play_arrow_rounded
-        : Icons.lock_outline_rounded;
-    final marker = Container(
-      width: 54,
-      height: 54,
-      decoration: BoxDecoration(
-        color: !unlocked
-            ? const Color(0xFFE5EEF5)
-            : (done ? const Color(0xFFDFF4EE) : _blue),
-        shape: BoxShape.circle,
-        boxShadow: unlocked && !done
-            ? const [BoxShadow(color: Color(0xFF06457B), offset: Offset(0, 4))]
-            : null,
-      ),
-      child: Icon(
-        icon,
-        color: !unlocked
-            ? _muted
-            : (done ? const Color(0xFF177054) : Colors.white),
-      ),
-    );
-    final justUnlocked =
-        index > 0 && !done && lessons[index - 1].id == _recentlyCompleted;
-    return Padding(
-      padding: EdgeInsets.only(left: index.isOdd ? 22 : 0, bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          if (justUnlocked)
-            MotionReveal(
-              key: ValueKey(lesson.id),
-              duration: const Duration(milliseconds: 340),
-              startScale: .68,
-              lift: 10,
-              child: marker,
-            )
-          else
-            marker,
-          const SizedBox(width: 13),
-          Expanded(
-            child: Material(
-              color: Colors.white,
-              shape: RoundedRectangleBorder(
-                side: const BorderSide(color: _outline),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 4,
-                ),
-                title: Text(
-                  lesson.title,
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-                subtitle: Text(
-                  unlocked
-                      ? lesson.description
-                      : 'Terkunci · selesaikan lesson sebelumnya',
-                ),
-                trailing: unlocked
-                    ? const Icon(Icons.chevron_right_rounded)
-                    : null,
-                onTap: unlocked ? () => _openLesson(lesson, progress) : null,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _questCard(LearningProgress progress, int goal, int day) {

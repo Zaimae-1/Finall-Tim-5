@@ -88,15 +88,23 @@ class LearningProgress {
     return gap <= 1 || (gap == 2 && freezes > 0) ? streak : 0;
   }
 
-  int rewardXp(String lessonId, bool perfect) =>
-      completed.contains(lessonId) ? 0 : (perfect ? 15 : 10);
+  int rewardXp(String lessonId, bool perfect, {int? level}) =>
+      completed.contains(lessonId)
+      ? 0
+      : (perfect ? 15 : 10) +
+            (level != null && level > 0 && level % 5 == 0 ? 250 : 0);
 
-  LearningProgress finish(String lessonId, bool perfect, int day) {
+  LearningProgress finish(
+    String lessonId,
+    bool perfect,
+    int day, {
+    int? level,
+  }) {
     final first = !completed.contains(lessonId);
     final usedFreeze = lastDay == day - 2 && freezes > 0;
     return copyWith(
       completed: {...completed, lessonId},
-      xp: xp + rewardXp(lessonId, perfect),
+      xp: xp + rewardXp(lessonId, perfect, level: level),
       gems: gems + (first ? 10 : 0),
       streak: lastDay == day ? streak : activeStreak(day) + 1,
       lastDay: day,

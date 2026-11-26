@@ -1,0 +1,575 @@
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+
+import 'course.dart';
+
+const _ink = Color(0xFF103552);
+const _deep = Color(0xFF075DAB);
+
+/// A treasure map: the first lesson starts at the bottom and the route rises.
+class LearningPath extends StatefulWidget {
+  const LearningPath({
+    super.key,
+    required this.lessons,
+    required this.completed,
+    required this.animate,
+    required this.onOpen,
+    this.recentlyCompleted,
+  });
+
+  final List<Lesson> lessons;
+  final Set<String> completed;
+  final bool animate;
+  final String? recentlyCompleted;
+  final ValueChanged<Lesson> onOpen;
+
+  @override
+  State<LearningPath> createState() => _LearningPathState();
+}
+
+class _LearningPathState extends State<LearningPath> {
+  final _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion =
+        MediaQuery.disableAnimationsOf(context) || !widget.animate;
+    final mapHeight = widget.lessons.length * 174.0 + 42;
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: const Color(0xFF8ACFDA), width: 2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x230B5371),
+            blurRadius: 24,
+            offset: Offset(0, 10),
+          ),
+        ],
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF8EDBE7), Color(0xFF37A9CD), Color(0xFF0B78AF)],
+        ),
+      ),
+      child: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 18, 20, 12),
+            child: Row(
+              children: [
+                Icon(Icons.map_rounded, color: Colors.white),
+                SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    'Peta petualangan',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 19,
+                    ),
+                  ),
+                ),
+                Text(
+                  '↑ LEVEL',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: math.min(
+              MediaQuery.sizeOf(context).width < 600 ? 320 : 530,
+              math.max(220, MediaQuery.sizeOf(context).height - 230),
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                controller: _scroll,
+                reverse: true,
+                child: SizedBox(
+                  height: mapHeight,
+                  width: constraints.maxWidth,
+                  child: CustomPaint(
+                    painter: _SeaMapPainter(widget.lessons.length),
+                    child: Stack(
+                      children: [
+                        for (
+                          var index = 0;
+                          index < widget.lessons.length;
+                          index++
+                        )
+                          Positioned(
+                            top:
+                                (widget.lessons.length - index - 1) * 174.0 +
+                                12,
+                            left: 0,
+                            right: 0,
+                            child: _MapStop(
+                              level: index + 1,
+                              lesson: widget.lessons[index],
+                              done: widget.completed.contains(
+                                widget.lessons[index].id,
+                              ),
+                              unlocked:
+                                  index == 0 ||
+                                  widget.completed.contains(
+                                    widget.lessons[index - 1].id,
+                                  ),
+                              animate: !reduceMotion,
+                              justUnlocked:
+                                  index > 0 &&
+                                  widget.lessons[index - 1].id ==
+                                      widget.recentlyCompleted,
+                              onOpen: () =>
+                                  widget.onOpen(widget.lessons[index]),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 9, 16, 16),
+            child: Text(
+              'Mulai dari bawah • ikuti kapal menuju pulau harta karun',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MapStop extends StatelessWidget {
+  const _MapStop({
+    required this.level,
+    required this.lesson,
+    required this.done,
+    required this.unlocked,
+    required this.animate,
+    required this.justUnlocked,
+    required this.onOpen,
+  });
+
+  final int level;
+  final Lesson lesson;
+  final bool done;
+  final bool unlocked;
+  final bool animate;
+  final bool justUnlocked;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final island = level % 5 == 0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final shift = (level.isOdd ? -.11 : .11) * constraints.maxWidth;
+        final cardWidth = math.min(
+          constraints.maxWidth - shift.abs() * 2 - 20,
+          286.0,
+        );
+        return Transform.translate(
+          offset: Offset(shift, 0),
+          child: Center(
+            child: SizedBox(
+              width: cardWidth,
+              child: Column(
+                children: [
+                  Semantics(
+                    label: island
+                        ? 'Pulau harta karun level $level'
+                        : 'Kapal level $level',
+                    child: _AnimatedMapIcon(
+                      island: island,
+                      animate: animate,
+                      muted: !unlocked,
+                      opened: done,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Material(
+                    color: unlocked
+                        ? Colors.white.withValues(alpha: .95)
+                        : const Color(0xFFE3F0F3),
+                    borderRadius: BorderRadius.circular(18),
+                    elevation: unlocked ? 4 : 0,
+                    child: ListTile(
+                      dense: true,
+                      onTap: unlocked ? onOpen : null,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 2,
+                      ),
+                      leading: CircleAvatar(
+                        radius: 17,
+                        backgroundColor: island
+                            ? const Color(0xFFFFDC76)
+                            : const Color(0xFFD7F1FA),
+                        child: Text(
+                          '$level',
+                          style: const TextStyle(
+                            color: _ink,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      title: Text(
+                        lesson.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: _ink,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      subtitle: Text(
+                        island && !done
+                            ? '+250 XP bonus • ${lesson.description}'
+                            : done
+                            ? 'Selesai ✓'
+                            : unlocked
+                            ? lesson.description
+                            : 'Selesaikan level sebelumnya',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF47647A),
+                        ),
+                      ),
+                      trailing: Icon(
+                        done
+                            ? Icons.check_circle_rounded
+                            : unlocked
+                            ? Icons.play_circle_fill_rounded
+                            : Icons.lock_rounded,
+                        size: 23,
+                        color: done
+                            ? const Color(0xFF168567)
+                            : unlocked
+                            ? _deep
+                            : const Color(0xFF7996A4),
+                      ),
+                    ),
+                  ),
+                  if (justUnlocked)
+                    const Text(
+                      'TERBUKA!',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _AnimatedMapIcon extends StatefulWidget {
+  const _AnimatedMapIcon({
+    required this.island,
+    required this.animate,
+    required this.muted,
+    required this.opened,
+  });
+  final bool island;
+  final bool animate;
+  final bool muted;
+  final bool opened;
+
+  @override
+  State<_AnimatedMapIcon> createState() => _AnimatedMapIconState();
+}
+
+class _AnimatedMapIconState extends State<_AnimatedMapIcon>
+    with SingleTickerProviderStateMixin {
+  late final _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2600),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.animate) _controller.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnimatedMapIcon oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.animate && !_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    }
+    if (!widget.animate && _controller.isAnimating) {
+      _controller.stop();
+      _controller.value = .5;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 94,
+    height: 85,
+    child: AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final phase = widget.animate
+            ? math.sin(_controller.value * math.pi) * 2 - 1
+            : 0.0;
+        return Opacity(
+          opacity: widget.muted ? .65 : 1,
+          child: widget.island
+              ? Stack(
+                  children: [
+                    CustomPaint(
+                      size: const Size(94, 85),
+                      painter: _IslandPainter(opened: widget.opened),
+                    ),
+                    Positioned(
+                      left: 34,
+                      top: 5,
+                      child: Transform.rotate(
+                        angle: phase * .075,
+                        alignment: Alignment.bottomCenter,
+                        child: const CustomPaint(
+                          size: Size(48, 65),
+                          painter: _PalmPainter(),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : Transform.translate(
+                  offset: Offset(0, phase * 3),
+                  child: Transform.rotate(
+                    angle: phase * .045,
+                    child: const CustomPaint(
+                      size: Size(94, 85),
+                      painter: _BoatPainter(),
+                    ),
+                  ),
+                ),
+        );
+      },
+    ),
+  );
+}
+
+class _BoatPainter extends CustomPainter {
+  const _BoatPainter();
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()..isAntiAlias = true;
+    p.color = const Color(0xBFFFFFFF);
+    canvas.drawArc(const Rect.fromLTWH(5, 65, 84, 14), 0, math.pi, false, p);
+    p.color = const Color(0xFF133D5E);
+    canvas.drawPath(
+      Path()
+        ..moveTo(12, 52)
+        ..lineTo(84, 52)
+        ..lineTo(73, 68)
+        ..quadraticBezierTo(48, 77, 22, 68)
+        ..close(),
+      p,
+    );
+    p.color = const Color(0xFF0E76AE);
+    canvas.drawPath(
+      Path()
+        ..moveTo(18, 52)
+        ..lineTo(78, 52)
+        ..lineTo(72, 59)
+        ..lineTo(22, 59)
+        ..close(),
+      p,
+    );
+    p.color = const Color(0xFF654C36);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(45, 8, 3, 46),
+        const Radius.circular(2),
+      ),
+      p,
+    );
+    p.color = Colors.white;
+    canvas.drawPath(
+      Path()
+        ..moveTo(43, 12)
+        ..lineTo(14, 45)
+        ..lineTo(43, 45)
+        ..close(),
+      p,
+    );
+    p.color = const Color(0xFFFFD36A);
+    canvas.drawPath(
+      Path()
+        ..moveTo(50, 11)
+        ..lineTo(74, 45)
+        ..lineTo(50, 45)
+        ..close(),
+      p,
+    );
+    p.color = const Color(0xFFB3EFFF);
+    canvas.drawCircle(const Offset(14, 72), 2.5, p);
+    canvas.drawCircle(const Offset(80, 75), 2, p);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _IslandPainter extends CustomPainter {
+  const _IslandPainter({required this.opened});
+  final bool opened;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()..isAntiAlias = true;
+    p.color = const Color(0xAAE8FAFF);
+    canvas.drawOval(const Rect.fromLTWH(1, 62, 92, 19), p);
+    p.color = const Color(0xFFF6CE78);
+    canvas.drawOval(const Rect.fromLTWH(7, 49, 81, 25), p);
+    p.color = const Color(0xFF58A86B);
+    canvas.drawOval(const Rect.fromLTWH(18, 46, 62, 14), p);
+    p.color = const Color(0xFF71482F);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(18, 39, 27, 22),
+        const Radius.circular(3),
+      ),
+      p,
+    );
+    p.color = const Color(0xFFFFD978);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        opened
+            ? const Rect.fromLTWH(15, 28, 27, 8)
+            : const Rect.fromLTWH(19, 35, 25, 9),
+        const Radius.circular(2),
+      ),
+      p,
+    );
+    p.color = const Color(0xFF51331F);
+    canvas.drawRect(const Rect.fromLTWH(29, 40, 5, 20), p);
+    p.color = const Color(0xFFFFF2B7);
+    canvas.drawCircle(const Offset(31.5, 49), 2.5, p);
+  }
+
+  @override
+  bool shouldRepaint(covariant _IslandPainter oldDelegate) =>
+      oldDelegate.opened != opened;
+}
+
+class _PalmPainter extends CustomPainter {
+  const _PalmPainter();
+  @override
+  void paint(Canvas canvas, Size size) {
+    final trunk = Paint()
+      ..color = const Color(0xFF82543B)
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(const Offset(18, 61), const Offset(25, 22), trunk);
+    final leaf = Paint()
+      ..color = const Color(0xFF137B64)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 8
+      ..strokeCap = StrokeCap.round;
+    for (final tip in [
+      const Offset(3, 22),
+      const Offset(10, 9),
+      const Offset(30, 5),
+      const Offset(45, 18),
+      const Offset(43, 34),
+    ]) {
+      canvas.drawPath(
+        Path()
+          ..moveTo(25, 22)
+          ..quadraticBezierTo((25 + tip.dx) / 2, tip.dy - 8, tip.dx, tip.dy),
+        leaf,
+      );
+    }
+    final coconut = Paint()..color = const Color(0xFF7B5139);
+    canvas.drawCircle(const Offset(22, 26), 3, coconut);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _SeaMapPainter extends CustomPainter {
+  const _SeaMapPainter(this.count);
+  final int count;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final wave = Paint()
+      ..color = const Color(0x34FFFFFF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    for (var row = 0; row < size.height / 85; row++) {
+      final y = row * 85.0 + 35;
+      final path = Path()..moveTo(-15, y);
+      for (var x = -15.0; x < size.width + 55; x += 80) {
+        path.quadraticBezierTo(x + 20, y - 12, x + 40, y);
+        path.quadraticBezierTo(x + 60, y + 12, x + 80, y);
+      }
+      canvas.drawPath(path, wave);
+    }
+    final route = Paint()
+      ..color = const Color(0xD9FFFFFF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+    for (var level = 1; level < count; level++) {
+      final bottom = (count - level - 1) * 174.0 + 108;
+      final top = bottom - 174;
+      final x1 = size.width * (level.isOdd ? .39 : .61);
+      final x2 = size.width * (level.isOdd ? .61 : .39);
+      final path = Path()
+        ..moveTo(x1, bottom)
+        ..cubicTo(x1 - 32, bottom - 56, x2 + 32, top + 56, x2, top);
+      final metrics = path.computeMetrics().first;
+      for (var distance = 0.0; distance < metrics.length; distance += 16) {
+        final point = metrics.getTangentForOffset(distance)!.position;
+        canvas.drawCircle(point, 2.3, route..style = PaintingStyle.fill);
+      }
+      route.style = PaintingStyle.stroke;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SeaMapPainter oldDelegate) =>
+      oldDelegate.count != count;
+}
