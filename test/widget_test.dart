@@ -5,6 +5,7 @@ import 'package:duolingo_clone/features/auth/local_profiles.dart';
 import 'package:duolingo_clone/features/learn/learning_home.dart';
 import 'package:duolingo_clone/features/learn/learning_progress.dart';
 import 'package:duolingo_clone/features/learn/learning_path.dart';
+import 'package:duolingo_clone/features/learn/rank.dart';
 import 'package:duolingo_clone/features/learn/course.dart';
 import 'package:duolingo_clone/features/learn/learning_tab_bar.dart';
 import 'package:duolingo_clone/main.dart';
@@ -152,7 +153,7 @@ void main() {
       );
       await _tap(tester, 'Lanjut');
     }
-    expect(find.text('100% akurat · +15 XP'), findsOneWidget);
+    expect(find.text('100% akurat · +25 XP'), findsOneWidget);
     expect(
       tester.widget<SharkMascot>(find.byType(SharkMascot)).mood,
       SharkMood.celebrate,
@@ -192,7 +193,7 @@ void main() {
     await _tap(tester, 'Beli · 25 gems');
     expect(find.text('Saldo kamu: 0 gems.'), findsOneWidget);
     final persisted = await ProgressStore('nara@example.com').load();
-    expect(persisted.xp, 15);
+    expect(persisted.xp, 25);
     expect(persisted.completed, {'greetings'});
     expect(persisted.freezes, 1);
     expect(tester.takeException(), isNull);
@@ -358,21 +359,122 @@ void main() {
         .finish('greetings', true, 20)
         .finish('intro', false, 22);
     expect(progress.streak, 2);
-    expect(progress.xp, 25);
+    expect(progress.xp, 50);
     expect(progress.freezes, 0);
     expect(progress.lessonsOn(22), 1);
     expect(progress.activeStreak(24), 0);
   });
 
-  test('Treasure island grants 250 bonus XP only on first completion', () {
-    expect(lessons.length, greaterThanOrEqualTo(5));
+  test(
+    'One hundred levels have playable quizzes and Treasure every fifth stop',
+    () {
+      expect(lessons.length, 100);
+      expect(lessons.map((lesson) => lesson.id).toSet().length, 100);
+      for (var index = 0; index < lessons.length; index++) {
+        final level = index + 1;
+        expect(lessons[index].exercises.length, 5);
+        expect(isTreasureLevel(level), level % 5 == 0);
+        for (final exercise in lessons[index].exercises) {
+          expect(exercise.solution, isNotEmpty);
+        }
+      }
+      expect(
+        lessons
+            .where((lesson) => lesson.title.startsWith('Pulau harta karun'))
+            .length,
+        20,
+      );
+    },
+  );
+
+  test('Regular and Treasure rewards are exact and only granted once', () {
     final fifth = lessons[4];
     final first = const LearningProgress().finish(fifth.id, true, 20, level: 5);
-    expect(first.xp, 265);
+    expect(first.xp, 250);
     final repeat = first.finish(fifth.id, true, 20, level: 5);
-    expect(repeat.xp, 265);
-    expect(LearningProgress.fromJson(repeat.toJson()).xp, 265);
-    expect(const LearningProgress().rewardXp('future', false, level: 10), 260);
+    expect(repeat.xp, 250);
+    expect(LearningProgress.fromJson(repeat.toJson()).xp, 250);
+    expect(const LearningProgress().rewardXp(lessons[9].id, false), 250);
+    expect(const LearningProgress().rewardXp(lessons[99].id, true), 250);
+    expect(const LearningProgress().rewardXp(lessons[98].id, false), 25);
+    expect(
+      const LearningProgress().rewardXp(lessons[0].id, true, level: 5),
+      25,
+    );
+  });
+
+  test('Rank boundaries and progress follow total XP', () {
+    final cases = <int, RankTier>{
+      0: RankTier.bronze,
+      1: RankTier.bronze,
+      29: RankTier.bronze,
+      30: RankTier.silver,
+      59: RankTier.silver,
+      60: RankTier.gold,
+      99: RankTier.gold,
+      100: RankTier.platinum,
+      199: RankTier.platinum,
+      200: RankTier.diamond,
+      299: RankTier.diamond,
+      300: RankTier.ascendant,
+      399: RankTier.ascendant,
+      400: RankTier.immortal,
+      500: RankTier.immortal,
+      999: RankTier.immortal,
+      1000: RankTier.radiant,
+    };
+    for (final entry in cases.entries) {
+      expect(rankForXp(entry.key), entry.value);
+    }
+    expect(rankProgress(25), closeTo(25 / 30, .001));
+    expect(rankProgress(60), 0);
+    expect(rankProgress(1000), 1);
+  });
+
+  testWidgets('Profile and leaderboard show XP-based rank badges on phone', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    _reduceMotion(tester);
+    await ProgressStore(
+      'rank@example.com',
+    ).save(const LearningProgress(xp: 75));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: lingoSharkTheme(),
+        home: LearningHome(
+          profile: const LearnerProfile(
+            name: 'Kamu',
+            email: 'rank@example.com',
+          ),
+          onSignOut: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final tabs = find.byType(NavigationBar);
+    await tester.tap(
+      find.descendant(of: tabs, matching: find.byIcon(Icons.person_rounded)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Gold'), findsOneWidget);
+    expect(find.text('25 XP lagi menuju Platinum'), findsOneWidget);
+    expect(
+      tester.widget<RankBadge>(find.byType(RankBadge)).rank,
+      RankTier.gold,
+    );
+    await tester.tap(
+      find.descendant(
+        of: tabs,
+        matching: find.byIcon(Icons.emoji_events_rounded),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(RankBadge), findsNWidgets(9));
+    expect(find.text('Radiant'), findsOneWidget);
+    expect(find.text('Gold'), findsNWidgets(2));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('The sea map rises from boat level 1 to island level 5', (
@@ -393,13 +495,57 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Peta petualangan'), findsOneWidget);
-    expect(find.bySemanticsLabel('Kapal level 1'), findsOneWidget);
-    expect(find.bySemanticsLabel('Pulau harta karun level 5'), findsOneWidget);
+    expect(find.text('Sapa seseorang'), findsOneWidget);
+    final mapList = find.descendant(
+      of: find.byType(LearningPath),
+      matching: find.byType(ListView),
+    );
+    final controller = tester.widget<ListView>(mapList).controller!;
+    controller.jumpTo(4 * 182);
+    await tester.pump();
+    expect(find.text('Pulau harta karun'), findsOneWidget);
     expect(
       tester
           .widget<ListTile>(find.widgetWithText(ListTile, 'Pulau harta karun'))
           .onTap,
       isNull,
+    );
+    controller.jumpTo(controller.position.maxScrollExtent);
+    await tester.pump();
+    expect(find.text('Pulau harta karun 100'), findsOneWidget);
+    expect(find.byType(ListTile).evaluate().length, lessThan(12));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Level 100 unlocks when level 99 is complete', (tester) async {
+    _reduceMotion(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: LearningPath(
+            lessons: lessons,
+            completed: {for (final lesson in lessons.take(99)) lesson.id},
+            animate: false,
+            onOpen: (_) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final mapList = find.descendant(
+      of: find.byType(LearningPath),
+      matching: find.byType(ListView),
+    );
+    final controller = tester.widget<ListView>(mapList).controller!;
+    controller.jumpTo(controller.position.maxScrollExtent);
+    await tester.pump();
+    expect(
+      tester
+          .widget<ListTile>(
+            find.widgetWithText(ListTile, 'Pulau harta karun 100'),
+          )
+          .onTap,
+      isNotNull,
     );
     expect(tester.takeException(), isNull);
   });

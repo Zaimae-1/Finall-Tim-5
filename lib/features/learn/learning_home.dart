@@ -9,6 +9,7 @@ import 'learning_progress.dart';
 import 'learning_path.dart';
 import 'learning_tab_bar.dart';
 import 'lesson_page.dart';
+import 'rank.dart';
 
 const _navy = Color(0xFF103552);
 const _blue = Color(0xFF075DAB);
@@ -281,7 +282,10 @@ class _LearningHomeState extends State<LearningHome> {
   ) {
     final finished = progress.completed.length;
     return [
-      const _Heading(title: 'Jalur belajar', detail: 'Bahasa Inggris · Unit 1'),
+      const _Heading(
+        title: 'Jalur belajar',
+        detail: 'Bahasa Inggris · 100 level',
+      ),
       const SizedBox(height: 18),
       _CourseBanner(finished: finished, animateMascot: progress.motion),
       const SizedBox(height: 25),
@@ -336,9 +340,14 @@ class _LearningHomeState extends State<LearningHome> {
   List<Widget> _ranks(LearningProgress progress, String name) {
     final roster =
         [
-          (name: 'Nara', xp: 40, me: false),
-          (name: 'Ari', xp: 25, me: false),
-          (name: 'Mira', xp: 12, me: false),
+          (name: 'Nara', xp: 1120, me: false),
+          (name: 'Ari', xp: 470, me: false),
+          (name: 'Mira', xp: 330, me: false),
+          (name: 'Dimas', xp: 245, me: false),
+          (name: 'Sari', xp: 145, me: false),
+          (name: 'Raka', xp: 75, me: false),
+          (name: 'Lia', xp: 40, me: false),
+          (name: 'Bimo', xp: 20, me: false),
           (name: name, xp: progress.xp, me: true),
         ]..sort(
           (a, b) =>
@@ -362,7 +371,23 @@ class _LearningHomeState extends State<LearningHome> {
                 borderRadius: BorderRadius.circular(12),
               ),
               leading: CircleAvatar(child: Text('${index + 1}')),
-              title: Text(member.me ? '${member.name} (kamu)' : member.name),
+              title: Row(
+                children: [
+                  RankBadge(rank: rankForXp(member.xp), size: 28),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      member.me ? '${member.name} (kamu)' : member.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(left: 37),
+                child: Text(rankForXp(member.xp).label),
+              ),
               trailing: Text('${member.xp} XP'),
             ),
         ],
@@ -442,6 +467,46 @@ class _LearningHomeState extends State<LearningHome> {
         OutlinedButton(
           onPressed: _saving ? null : () => _rename(progress, name),
           child: const Text('Ubah nama'),
+        ),
+      ],
+    ),
+    const SizedBox(height: 14),
+    _Panel(
+      children: [
+        const _Title(icon: Icons.military_tech_rounded, title: 'Rank kamu'),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            RankBadge(rank: rankForXp(progress.xp), size: 74),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    rankForXp(progress.xp).label,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 24,
+                      color: _navy,
+                    ),
+                  ),
+                  Text(
+                    '${progress.xp} XP terkumpul',
+                    style: const TextStyle(color: _muted),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        MotionProgress(value: rankProgress(progress.xp), label: 'Progres rank'),
+        const SizedBox(height: 8),
+        Text(
+          rankForXp(progress.xp).next == null
+              ? 'Rank tertinggi tercapai!'
+              : '${rankForXp(progress.xp).next!.minXp - progress.xp} XP lagi menuju ${rankForXp(progress.xp).next!.label}',
         ),
       ],
     ),
@@ -540,7 +605,7 @@ class _CourseBanner extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Percakapan pertama',
+                        'Petualangan Bahasa Inggris',
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w900,
@@ -551,7 +616,7 @@ class _CourseBanner extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                       const Text(
-                        'Sapa, kenalan, lalu pesan makanan.',
+                        'Naik level dan cari pulau harta karun.',
                         style: TextStyle(color: Color(0xFFDAF2FF), height: 1.4),
                       ),
                       const SizedBox(height: 13),

@@ -6,6 +6,7 @@ import 'course.dart';
 
 const _ink = Color(0xFF103552);
 const _deep = Color(0xFF075DAB);
+const _stopExtent = 182.0;
 
 /// A treasure map: the first lesson starts at the bottom and the route rises.
 class LearningPath extends StatefulWidget {
@@ -31,6 +32,23 @@ class LearningPath extends StatefulWidget {
 class _LearningPathState extends State<LearningPath> {
   final _scroll = ScrollController();
 
+  void _goToLevel(int level) {
+    if (!_scroll.hasClients) return;
+    final target = ((level - 1) * _stopExtent).clamp(
+      0.0,
+      _scroll.position.maxScrollExtent,
+    );
+    if (MediaQuery.disableAnimationsOf(context) || !widget.animate) {
+      _scroll.jumpTo(target);
+    } else {
+      _scroll.animateTo(
+        target,
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
   @override
   void dispose() {
     _scroll.dispose();
@@ -41,7 +59,14 @@ class _LearningPathState extends State<LearningPath> {
   Widget build(BuildContext context) {
     final reduceMotion =
         MediaQuery.disableAnimationsOf(context) || !widget.animate;
-    final mapHeight = widget.lessons.length * 174.0 + 42;
+    final currentLevel =
+        widget.lessons.indexWhere(
+          (lesson) => !widget.completed.contains(lesson.id),
+        ) +
+        1;
+    final activeLevel = currentLevel == 0
+        ? widget.lessons.length
+        : currentLevel;
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
@@ -62,29 +87,46 @@ class _LearningPathState extends State<LearningPath> {
       ),
       child: Column(
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(20, 18, 20, 12),
             child: Row(
               children: [
-                Icon(Icons.map_rounded, color: Colors.white),
-                SizedBox(width: 9),
+                const Icon(Icons.map_rounded, color: Colors.white),
+                const SizedBox(width: 9),
                 Expanded(
                   child: Text(
                     'Peta petualangan',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w900,
-                      fontSize: 19,
+                      fontSize: 17,
                     ),
                   ),
                 ),
-                Text(
-                  '↑ LEVEL',
-                  style: TextStyle(
+                IconButton(
+                  tooltip: 'Ke level aktif $activeLevel',
+                  onPressed: () => _goToLevel(activeLevel),
+                  icon: const Icon(
+                    Icons.my_location_rounded,
                     color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.3,
                   ),
+                ),
+                PopupMenuButton<int>(
+                  tooltip: 'Pilih pulau atau level',
+                  icon: const Icon(Icons.sailing_rounded, color: Colors.white),
+                  onSelected: _goToLevel,
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 1,
+                      child: Text('Level 1 · Mulai'),
+                    ),
+                    for (
+                      var level = 5;
+                      level <= widget.lessons.length;
+                      level += 5
+                    )
+                      PopupMenuItem(value: level, child: Text('Pulau $level')),
+                  ],
                 ),
               ],
             ),
@@ -94,53 +136,36 @@ class _LearningPathState extends State<LearningPath> {
               MediaQuery.sizeOf(context).width < 600 ? 320 : 530,
               math.max(220, MediaQuery.sizeOf(context).height - 230),
             ),
-            child: LayoutBuilder(
-              builder: (context, constraints) => SingleChildScrollView(
-                controller: _scroll,
-                reverse: true,
-                child: SizedBox(
-                  height: mapHeight,
-                  width: constraints.maxWidth,
-                  child: CustomPaint(
-                    painter: _SeaMapPainter(widget.lessons.length),
-                    child: Stack(
-                      children: [
-                        for (
-                          var index = 0;
-                          index < widget.lessons.length;
-                          index++
-                        )
-                          Positioned(
-                            top:
-                                (widget.lessons.length - index - 1) * 174.0 +
-                                12,
-                            left: 0,
-                            right: 0,
-                            child: _MapStop(
-                              level: index + 1,
-                              lesson: widget.lessons[index],
-                              done: widget.completed.contains(
-                                widget.lessons[index].id,
-                              ),
-                              unlocked:
-                                  index == 0 ||
-                                  widget.completed.contains(
-                                    widget.lessons[index - 1].id,
-                                  ),
-                              animate: !reduceMotion,
-                              justUnlocked:
-                                  index > 0 &&
-                                  widget.lessons[index - 1].id ==
-                                      widget.recentlyCompleted,
-                              onOpen: () =>
-                                  widget.onOpen(widget.lessons[index]),
-                            ),
+            child: ListView.builder(
+              controller: _scroll,
+              reverse: true,
+              itemExtent: _stopExtent,
+              itemCount: widget.lessons.length,
+              itemBuilder: (context, index) {
+                final lesson = widget.lessons[index];
+                return CustomPaint(
+                  painter: _SeaMapPainter(index + 1),
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: _MapStop(
+                      level: index + 1,
+                      lesson: lesson,
+                      done: widget.completed.contains(lesson.id),
+                      unlocked:
+                          index == 0 ||
+                          widget.completed.contains(
+                            widget.lessons[index - 1].id,
                           ),
-                      ],
+                      animate: !reduceMotion,
+                      justUnlocked:
+                          index > 0 &&
+                          widget.lessons[index - 1].id ==
+                              widget.recentlyCompleted,
+                      onOpen: () => widget.onOpen(lesson),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
           const Padding(
@@ -181,7 +206,7 @@ class _MapStop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final island = level % 5 == 0;
+    final island = isTreasureLevel(level);
     return LayoutBuilder(
       builder: (context, constraints) {
         final shift = (level.isOdd ? -.11 : .11) * constraints.maxWidth;
@@ -248,7 +273,7 @@ class _MapStop extends StatelessWidget {
                       ),
                       subtitle: Text(
                         island && !done
-                            ? '+250 XP bonus • ${lesson.description}'
+                            ? '+250 XP • ${lesson.description}'
                             : done
                             ? 'Selesai ✓'
                             : unlocked
@@ -530,8 +555,8 @@ class _PalmPainter extends CustomPainter {
 }
 
 class _SeaMapPainter extends CustomPainter {
-  const _SeaMapPainter(this.count);
-  final int count;
+  const _SeaMapPainter(this.level);
+  final int level;
   @override
   void paint(Canvas canvas, Size size) {
     final wave = Paint()
@@ -552,9 +577,9 @@ class _SeaMapPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4
       ..strokeCap = StrokeCap.round;
-    for (var level = 1; level < count; level++) {
-      final bottom = (count - level - 1) * 174.0 + 108;
-      final top = bottom - 174;
+    if (level < 100) {
+      final bottom = size.height + 20;
+      final top = -20.0;
       final x1 = size.width * (level.isOdd ? .39 : .61);
       final x2 = size.width * (level.isOdd ? .61 : .39);
       final path = Path()
@@ -571,5 +596,5 @@ class _SeaMapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _SeaMapPainter oldDelegate) =>
-      oldDelegate.count != count;
+      oldDelegate.level != level;
 }

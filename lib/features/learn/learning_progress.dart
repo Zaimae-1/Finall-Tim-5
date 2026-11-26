@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'course.dart';
+
 int localDay(DateTime time) =>
     DateTime.utc(time.year, time.month, time.day).millisecondsSinceEpoch ~/
     Duration.millisecondsPerDay;
@@ -88,11 +90,12 @@ class LearningProgress {
     return gap <= 1 || (gap == 2 && freezes > 0) ? streak : 0;
   }
 
-  int rewardXp(String lessonId, bool perfect, {int? level}) =>
-      completed.contains(lessonId)
-      ? 0
-      : (perfect ? 15 : 10) +
-            (level != null && level > 0 && level % 5 == 0 ? 250 : 0);
+  int rewardXp(String lessonId, bool perfect, {int? level}) {
+    if (completed.contains(lessonId)) return 0;
+    final knownIndex = lessons.indexWhere((lesson) => lesson.id == lessonId);
+    final actualLevel = knownIndex < 0 ? level ?? 0 : knownIndex + 1;
+    return isTreasureLevel(actualLevel) ? 250 : 25;
+  }
 
   LearningProgress finish(
     String lessonId,

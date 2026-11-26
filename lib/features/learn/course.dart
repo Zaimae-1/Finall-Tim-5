@@ -43,7 +43,14 @@ class Lesson {
   final List<Exercise> exercises;
 }
 
-const lessons = [
+bool isTreasureLevel(int level) => level > 0 && level % 5 == 0;
+
+final List<Lesson> lessons = List.unmodifiable([
+  ..._starterLessons,
+  for (var level = 6; level <= 100; level++) _makeLesson(level),
+]);
+
+const _starterLessons = [
   Lesson('greetings', 'Sapa seseorang', 'Sapaan dan ucapan sehari-hari', [
     Exercise.choice('Apa arti “Good morning”?', [
       'Selamat malam',
@@ -177,3 +184,152 @@ const lessons = [
     ],
   ),
 ];
+
+typedef _Topic = ({String title, List<String> english, List<String> indonesia});
+
+const List<_Topic> _topics = [
+  (
+    title: 'Di rumah',
+    english: ['House', 'Door', 'Window', 'Kitchen', 'Bedroom'],
+    indonesia: ['Rumah', 'Pintu', 'Jendela', 'Dapur', 'Kamar tidur'],
+  ),
+  (
+    title: 'Di sekolah',
+    english: ['School', 'Teacher', 'Book', 'Pencil', 'Classroom'],
+    indonesia: ['Sekolah', 'Guru', 'Buku', 'Pensil', 'Ruang kelas'],
+  ),
+  (
+    title: 'Di pantai',
+    english: ['Beach', 'Sand', 'Wave', 'Shell', 'Sea'],
+    indonesia: ['Pantai', 'Pasir', 'Ombak', 'Kerang', 'Laut'],
+  ),
+  (
+    title: 'Warna',
+    english: ['Blue', 'Red', 'Green', 'Yellow', 'White'],
+    indonesia: ['Biru', 'Merah', 'Hijau', 'Kuning', 'Putih'],
+  ),
+  (
+    title: 'Keluarga',
+    english: ['Mother', 'Father', 'Sister', 'Brother', 'Grandmother'],
+    indonesia: ['Ibu', 'Ayah', 'Saudari', 'Saudara laki-laki', 'Nenek'],
+  ),
+  (
+    title: 'Hewan',
+    english: ['Shark', 'Dolphin', 'Turtle', 'Bird', 'Cat'],
+    indonesia: ['Hiu', 'Lumba-lumba', 'Penyu', 'Burung', 'Kucing'],
+  ),
+  (
+    title: 'Buah',
+    english: ['Apple', 'Banana', 'Orange', 'Mango', 'Grape'],
+    indonesia: ['Apel', 'Pisang', 'Jeruk', 'Mangga', 'Anggur'],
+  ),
+  (
+    title: 'Waktu',
+    english: ['Morning', 'Noon', 'Evening', 'Night', 'Today'],
+    indonesia: ['Pagi', 'Siang', 'Sore', 'Malam', 'Hari ini'],
+  ),
+  (
+    title: 'Pakaian',
+    english: ['Shirt', 'Shoes', 'Hat', 'Jacket', 'Dress'],
+    indonesia: ['Kemeja', 'Sepatu', 'Topi', 'Jaket', 'Gaun'],
+  ),
+  (
+    title: 'Transportasi',
+    english: ['Bus', 'Train', 'Bicycle', 'Airplane', 'Ship'],
+    indonesia: ['Bus', 'Kereta', 'Sepeda', 'Pesawat', 'Kapal'],
+  ),
+  (
+    title: 'Di kota',
+    english: ['Street', 'Market', 'Hospital', 'Park', 'Bridge'],
+    indonesia: ['Jalan', 'Pasar', 'Rumah sakit', 'Taman', 'Jembatan'],
+  ),
+  (
+    title: 'Cuaca',
+    english: ['Rain', 'Sun', 'Cloud', 'Wind', 'Storm'],
+    indonesia: ['Hujan', 'Matahari', 'Awan', 'Angin', 'Badai'],
+  ),
+  (
+    title: 'Tubuh',
+    english: ['Head', 'Hand', 'Eye', 'Foot', 'Ear'],
+    indonesia: ['Kepala', 'Tangan', 'Mata', 'Kaki', 'Telinga'],
+  ),
+  (
+    title: 'Kegiatan',
+    english: ['Read', 'Write', 'Swim', 'Sleep', 'Run'],
+    indonesia: ['Membaca', 'Menulis', 'Berenang', 'Tidur', 'Berlari'],
+  ),
+  (
+    title: 'Perasaan',
+    english: ['Happy', 'Sad', 'Tired', 'Excited', 'Calm'],
+    indonesia: ['Senang', 'Sedih', 'Lelah', 'Bersemangat', 'Tenang'],
+  ),
+  (
+    title: 'Makanan',
+    english: ['Fish', 'Soup', 'Egg', 'Cheese', 'Cake'],
+    indonesia: ['Ikan', 'Sup', 'Telur', 'Keju', 'Kue'],
+  ),
+  (
+    title: 'Minuman',
+    english: ['Water', 'Milk', 'Tea', 'Coffee', 'Juice'],
+    indonesia: ['Air', 'Susu', 'Teh', 'Kopi', 'Jus'],
+  ),
+  (
+    title: 'Alam',
+    english: ['Mountain', 'River', 'Forest', 'Island', 'Sky'],
+    indonesia: ['Gunung', 'Sungai', 'Hutan', 'Pulau', 'Langit'],
+  ),
+  (
+    title: 'Belanja',
+    english: ['Price', 'Money', 'Bag', 'Receipt', 'Store'],
+    indonesia: ['Harga', 'Uang', 'Tas', 'Struk', 'Toko'],
+  ),
+  (
+    title: 'Petualangan',
+    english: ['Treasure', 'Compass', 'Captain', 'Journey', 'Harbor'],
+    indonesia: ['Harta karun', 'Kompas', 'Kapten', 'Perjalanan', 'Pelabuhan'],
+  ),
+];
+
+Lesson _makeLesson(int level) {
+  final topic = _topics[(level - 6) % _topics.length];
+  final shift = (level - 6) ~/ _topics.length;
+  final exercises = <Exercise>[
+    for (var question = 0; question < 4; question++)
+      _wordChoice(topic, (shift + question) % 5, level + question),
+    Exercise.match(
+      [
+        for (var index = 0; index < 3; index++)
+          topic.english[(shift + index) % 5],
+      ],
+      [
+        topic.indonesia[(shift + 1) % 5],
+        topic.indonesia[(shift + 2) % 5],
+        topic.indonesia[shift % 5],
+      ],
+      const [2, 0, 1],
+    ),
+  ];
+  return Lesson(
+    'level_$level',
+    isTreasureLevel(level)
+        ? 'Pulau harta karun $level'
+        : '${topic.title} $level',
+    isTreasureLevel(level)
+        ? 'Quest Treasure · ${topic.title}'
+        : 'Kosakata ${topic.title.toLowerCase()}',
+    exercises,
+  );
+}
+
+Exercise _wordChoice(_Topic topic, int word, int seed) {
+  final correct = seed % 3;
+  final options = List<String>.filled(3, '');
+  options[correct] = topic.indonesia[word];
+  options[(correct + 1) % 3] = topic.indonesia[(word + 1) % 5];
+  options[(correct + 2) % 3] = topic.indonesia[(word + 2) % 5];
+  return Exercise.choice(
+    'Apa arti “${topic.english[word]}”?',
+    options,
+    correct,
+  );
+}

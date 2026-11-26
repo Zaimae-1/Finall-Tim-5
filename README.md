@@ -4,7 +4,7 @@ Final project sekolah Tim 5 menggunakan Flutter. Tujuannya membuat ulang tampila
 
 ## Status saat ini
 
-**LingoShark** sudah punya layar sambutan, masuk, dan onboarding untuk profil demo. Setelah masuk, buka jalur **Belajar** untuk memainkan lima lesson Bahasa Inggris. Setiap lesson berisi lima soal pilihan ganda, susun kata, atau pasangan kata. Peta laut dimulai dari level 1 di bawah dan naik menuju level 5. Kapal bergerak mengikuti ombak; pada setiap level kelipatan 5 muncul pulau dengan pohon kelapa yang bergoyang dan peti harta karun. Penyelesaian pertama level pulau memberi bonus 250 XP di samping XP lesson biasa. Quest, Toko, dan Profil memakai progres akun yang sama. Peringkat memakai contoh peserta dan XP kamu.
+**LingoShark** sudah punya layar sambutan, masuk, dan onboarding untuk profil demo. Jalur **Belajar** kini berisi **100 level** Bahasa Inggris, masing-masing lima soal. Lima level pertama ditulis khusus; level 6–100 memakai kuis kosakata dari 20 topik dengan variasi urutan soal. Peta laut dimulai dari level 1 di bawah dan naik menuju level 100, dengan pintasan ke level aktif dan setiap pulau. Kapal bergerak mengikuti ombak; setiap level kelipatan 5 adalah quest **Treasure** dengan pulau, pohon kelapa bergoyang, dan peti harta karun. Penyelesaian pertama level reguler memberi 25 XP dan level Treasure memberi 250 XP. Quest, Toko, Profil, dan rank memakai progres akun yang sama. Peringkat memakai contoh peserta dan XP kamu.
 
 Untuk demo, pilih **Mulai belajar**, isi level dan target harian, lalu daftar dengan data contoh seperti `nama@example.com`. Coba selesaikan satu lesson, keluar dari Profil, lalu masuk lagi dengan data yang sama. Profil dan progres disimpan di perangkat atau browser yang dipakai. Sesi berakhir saat aplikasi ditutup. Gerakan hiu bisa dimatikan dari Profil dan mengikuti preferensi pengurangan animasi perangkat.
 
@@ -12,18 +12,18 @@ Android adalah target utama tugas karena aplikasi referensinya dari Play Store. 
 
 ## Cakupan yang dikerjakan
 
-Fokus awal: satu kursus **bahasa Inggris untuk pengguna berbahasa Indonesia**, dengan 5 lesson aktif, masing-masing 5 soal. Angka ini adalah cakupan proyek tim, bukan ketentuan resmi guru; sesuaikan jika ada rubrik sekolah.
+Fokus saat ini: satu kursus **bahasa Inggris untuk pengguna berbahasa Indonesia**, dengan 100 level aktif, masing-masing 5 soal. Angka ini adalah cakupan proyek tim, bukan ketentuan resmi guru; sesuaikan jika ada rubrik sekolah.
 
 | Halaman | Perilaku yang harus berfungsi |
 | --- | --- |
 | Welcome dan onboarding | Mulai, pilih kursus, tujuan harian, dan level awal; pilihan tersimpan |
 | Masuk / daftar | Profil demo lokal; tidak mengklaim autentikasi online |
-| Home / Learn | Jalur lesson; tampilkan status selesai, aktif, dan terkunci; lesson berikutnya terbuka setelah selesai |
+| Home / Learn | Peta laut 100 level; kapal reguler dan pulau Treasure setiap kelipatan 5; status selesai, aktif, dan terkunci; level berikutnya terbuka setelah selesai |
 | Lesson | Pilihan ganda, susun kata, dan pasangan kata; cek jawaban, feedback benar/salah, progress bar, serta konfirmasi keluar |
 | Hasil lesson | Tampilkan akurasi dan XP; simpan progres dan kembali ke Home |
 | Quests | Target harian mengikuti aktivitas belajar; hadiah hanya dapat diklaim sekali |
-| Leaderboard | Peringkat demo dengan data contoh; posisi pengguna mengikuti XP, diberi label demo |
-| Profil / pengaturan | Edit nama, lihat XP dan streak, ubah preferensi sederhana |
+| Leaderboard | Peringkat demo dengan data contoh; posisi dan lencana rank setiap peserta mengikuti XP, diberi label demo |
+| Profil / pengaturan | Edit nama, lihat XP, streak, lencana rank, dan progres ke rank berikutnya; ubah preferensi sederhana |
 | Shop | Saldo gems, pembelian Streak Freeze dengan gems; saldo tidak boleh negatif |
 
 Alur demo: **Welcome → onboarding → profil → Home → lesson → hasil → progres/XP/quest diperbarui → lesson berikutnya terbuka**.
@@ -33,7 +33,9 @@ Alur demo: **Welcome → onboarding → profil → Home → lesson → hasil →
 - Semua navigasi dan tombol yang ditampilkan harus memiliki fungsi jelas. Fitur belum tersedia ditandai, bukan tombol kosong.
 - Profil, progres lesson, XP, gems, dan quest tersimpan secara lokal per akun demo.
 - Streak bertambah sekali per hari saat minimal satu lesson selesai, bukan setiap menyelesaikan soal atau mengulang lesson di hari yang sama.
-- XP dan gems penyelesaian pertama diberikan sekali per lesson. Setiap level kelipatan 5 memberi bonus 250 XP pada penyelesaian pertama saja. Latihan ulang tetap bisa dihitung untuk quest harian.
+- XP dan gems penyelesaian pertama diberikan sekali per level. Level reguler memberi tepat 25 XP; level Treasure (5, 10, ..., 100) memberi tepat 250 XP, bukan tambahan di atas XP reguler. Latihan ulang tetap bisa dihitung untuk quest harian, tetapi tidak mendapat XP lagi.
+- Rank dihitung dari total XP: Bronze 0–29, Silver 30–59, Gold 60–99, Platinum 100–199, Diamond 200–299, Ascendant 300–399, Immortal 400–999, dan Radiant mulai 1000 XP. Batas yang beririsan masuk ke rank baru; 0 XP ditampilkan Bronze sebagai rank awal. Lencana dibuat khusus untuk LingoShark dengan referensi gaya geometris dari gambar tugas.
+- Progres lama tetap tersimpan. XP dari lesson yang diselesaikan sebelum perubahan aturan hadiah tidak dihitung ulang; aturan baru berlaku pada penyelesaian level berikutnya.
 - Lesson dimulai dengan lima hati. Jawaban salah mengurangi satu hati. Jika hati habis, pemain bisa ulang dari awal atau kembali ke jalur belajar.
 - Gunakan tema biru LingoShark dan maskot hiu buatan proyek. Gunakan Duolingo sebagai referensi alur dan fitur, lalu sesuaikan susunan layar dan komponen dengan identitas LingoShark.
 - Buat layout aman di layar ponsel kecil, teks terbaca, dan halaman bisa di-scroll bila perlu.
