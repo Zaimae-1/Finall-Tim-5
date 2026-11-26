@@ -20,7 +20,7 @@ Fokus saat ini: satu kursus **bahasa Inggris untuk pengguna berbahasa Indonesia*
 | Masuk / daftar | Profil demo lokal; tidak mengklaim autentikasi online |
 | Home / Learn | Peta laut penuh 100 level; kapal reguler dan pulau Treasure setiap kelipatan 5; hiu dan gelembung petunjuk di level aktif; level berikutnya terbuka setelah selesai |
 | Lesson | Pilihan ganda, susun kata, dan pasangan kata; cek jawaban, feedback benar/salah, progress bar, serta konfirmasi keluar |
-| Hasil lesson | Tampilkan akurasi dan XP; simpan progres dan kembali ke Home |
+| Hasil lesson | Tampilkan akurasi, XP, Gems, dan perubahan streak; simpan progres dan kembali ke Home |
 | Quests | Target harian mengikuti aktivitas belajar; hadiah hanya dapat diklaim sekali |
 | Leaderboard | Peringkat demo dengan data contoh; posisi dan lencana rank setiap peserta mengikuti XP, diberi label demo |
 | Profil / pengaturan | Avatar aktif, nama, email, statistik, lencana rank, progres ke rank berikutnya, daftar semua rank, edit profil, dan pengaturan belajar |

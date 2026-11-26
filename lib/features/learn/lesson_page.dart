@@ -5,6 +5,8 @@ import '../../shared/motion.dart';
 import '../../shared/shark_mascot.dart';
 import 'course.dart';
 
+typedef LessonReward = ({int xp, int gems, int streak});
+
 class LessonPage extends StatefulWidget {
   const LessonPage({
     super.key,
@@ -14,7 +16,7 @@ class LessonPage extends StatefulWidget {
   });
 
   final Lesson lesson;
-  final Future<int> Function(bool perfect) onComplete;
+  final Future<LessonReward> Function(bool perfect) onComplete;
   final bool animateMascot;
 
   @override
@@ -30,7 +32,7 @@ class _LessonPageState extends State<LessonPage> {
   final _ordered = <int>[];
   final _pairs = <int, int>{};
   bool? _correct;
-  int? _earnedXp;
+  LessonReward? _earnedReward;
   bool _saving = false;
   bool _saveFailed = false;
   bool _confirmingExit = false;
@@ -86,10 +88,10 @@ class _LessonPageState extends State<LessonPage> {
       _saveFailed = false;
     });
     try {
-      final xp = await widget.onComplete(
+      final reward = await widget.onComplete(
         _correctCount == widget.lesson.exercises.length,
       );
-      if (mounted) setState(() => _earnedXp = xp);
+      if (mounted) setState(() => _earnedReward = reward);
     } on Exception {
       if (mounted) setState(() => _saveFailed = true);
     } finally {
@@ -99,7 +101,7 @@ class _LessonPageState extends State<LessonPage> {
 
   Future<void> _exit() async {
     if (_saving || _confirmingExit) return;
-    if (_earnedXp != null || _hearts == 0) {
+    if (_earnedReward != null || _hearts == 0) {
       Navigator.of(context).pop();
       return;
     }
@@ -129,7 +131,7 @@ class _LessonPageState extends State<LessonPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final total = widget.lesson.exercises.length;
-    final showSummary = _earnedXp != null || _hearts == 0;
+    final showSummary = _earnedReward != null || _hearts == 0;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -363,21 +365,21 @@ class _LessonPageState extends State<LessonPage> {
   }
 
   List<Widget> _summary(BuildContext context, int total) {
-    final xp = _earnedXp;
+    final reward = _earnedReward;
     return [
       const SizedBox(height: 14),
       Center(
         child: SharkMascot(
           size: 176,
           animate: widget.animateMascot,
-          mood: xp == null ? SharkMood.encourage : SharkMood.celebrate,
+          mood: reward == null ? SharkMood.encourage : SharkMood.celebrate,
         ),
       ),
       const SizedBox(height: 18),
       Semantics(
         header: true,
         child: Text(
-          xp == null ? 'Hati habis' : 'Latihan selesai!',
+          reward == null ? 'Hati habis' : 'Latihan selesai!',
           textAlign: TextAlign.center,
           style: Theme.of(
             context,
@@ -389,9 +391,9 @@ class _LessonPageState extends State<LessonPage> {
         startScale: .92,
         duration: const Duration(milliseconds: 350),
         child: Text(
-          xp == null
+          reward == null
               ? 'Coba ulangi latihan untuk memulai dengan 5 hati.'
-              : '${(_correctCount * 100 / total).round()}% akurat · +$xp XP',
+              : '${(_correctCount * 100 / total).round()}% akurat · +${reward.xp} XP',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontWeight: FontWeight.w800,
@@ -399,8 +401,42 @@ class _LessonPageState extends State<LessonPage> {
           ),
         ),
       ),
+      if (reward != null) ...[
+        const SizedBox(height: 13),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 9,
+          runSpacing: 8,
+          children: [
+            Chip(
+              avatar: const Icon(
+                Icons.diamond_rounded,
+                size: 18,
+                color: Color(0xFF075DAB),
+              ),
+              label: Text('+${reward.gems} Gems'),
+            ),
+            Chip(
+              avatar: const Icon(
+                Icons.local_fire_department_rounded,
+                size: 18,
+                color: Color(0xFFA84E18),
+              ),
+              label: Text('+${reward.streak} hari streak'),
+            ),
+          ],
+        ),
+        if (reward.xp == 0 && reward.gems == 0)
+          const Padding(
+            padding: EdgeInsets.only(top: 7),
+            child: Text(
+              'Hadiah level ini sudah pernah diklaim.',
+              textAlign: TextAlign.center,
+            ),
+          ),
+      ],
       const SizedBox(height: 24),
-      if (xp == null) ...[
+      if (reward == null) ...[
         FilledButton(
           onPressed: () => setState(() {
             _index = 0;

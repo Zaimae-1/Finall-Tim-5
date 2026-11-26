@@ -123,16 +123,19 @@ class _LearningHomeState extends State<LearningHome> {
                 final current = _progress ?? progress;
                 final level =
                     lessons.indexWhere((entry) => entry.id == lesson.id) + 1;
-                final xp = current.rewardXp(lesson.id, perfect, level: level);
-                await _save(
-                  current.finish(
-                    lesson.id,
-                    perfect,
-                    localDay(DateTime.now()),
-                    level: level,
-                  ),
+                final day = localDay(DateTime.now());
+                final next = current.finish(
+                  lesson.id,
+                  perfect,
+                  day,
+                  level: level,
                 );
-                return xp;
+                await _save(next);
+                return (
+                  xp: next.xp - current.xp,
+                  gems: next.gems - current.gems,
+                  streak: next.activeStreak(day) - current.activeStreak(day),
+                );
               },
             ),
           ),

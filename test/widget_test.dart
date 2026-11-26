@@ -159,6 +159,8 @@ void main() {
       await _tap(tester, 'Lanjut');
     }
     expect(find.text('100% akurat · +25 XP'), findsOneWidget);
+    expect(find.text('+5 Gems'), findsOneWidget);
+    expect(find.text('+1 hari streak'), findsOneWidget);
     expect(
       tester.widget<SharkMascot>(find.byType(SharkMascot)).mood,
       SharkMood.celebrate,
