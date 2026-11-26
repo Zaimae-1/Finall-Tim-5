@@ -2,11 +2,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../shared/motion.dart';
+import '../../shared/shark_mascot.dart';
 import 'course.dart';
 
 const _ink = Color(0xFF103552);
 const _deep = Color(0xFF075DAB);
-const _stopExtent = 182.0;
+const _stopExtent = 220.0;
 
 /// A treasure map: the first lesson starts at the bottom and the route rises.
 class LearningPath extends StatefulWidget {
@@ -31,6 +33,26 @@ class LearningPath extends StatefulWidget {
 
 class _LearningPathState extends State<LearningPath> {
   final _scroll = ScrollController();
+
+  int get _activeLevel {
+    final index = widget.lessons.indexWhere(
+      (lesson) => !widget.completed.contains(lesson.id),
+    );
+    return index < 0 ? widget.lessons.length : index + 1;
+  }
+
+  @override
+  void didUpdateWidget(covariant LearningPath oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final previous = oldWidget.lessons.indexWhere(
+      (lesson) => !oldWidget.completed.contains(lesson.id),
+    );
+    if (previous + 1 != _activeLevel) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _goToLevel(_activeLevel);
+      });
+    }
+  }
 
   void _goToLevel(int level) {
     if (!_scroll.hasClients) return;
@@ -59,48 +81,48 @@ class _LearningPathState extends State<LearningPath> {
   Widget build(BuildContext context) {
     final reduceMotion =
         MediaQuery.disableAnimationsOf(context) || !widget.animate;
-    final currentLevel =
-        widget.lessons.indexWhere(
-          (lesson) => !widget.completed.contains(lesson.id),
-        ) +
-        1;
-    final activeLevel = currentLevel == 0
-        ? widget.lessons.length
-        : currentLevel;
+    final activeLevel = _activeLevel;
     return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: const Color(0xFF8ACFDA), width: 2),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x230B5371),
-            blurRadius: 24,
-            offset: Offset(0, 10),
-          ),
-        ],
-        gradient: const LinearGradient(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF8EDBE7), Color(0xFF37A9CD), Color(0xFF0B78AF)],
+          colors: [Color(0xFFAAE9EF), Color(0xFF54B9D7), Color(0xFF0978AC)],
         ),
       ),
       child: Column(
         children: [
           Padding(
-            padding: EdgeInsets.fromLTRB(20, 18, 20, 12),
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
             child: Row(
               children: [
-                const Icon(Icons.map_rounded, color: Colors.white),
-                const SizedBox(width: 9),
                 Expanded(
-                  child: Text(
-                    'Peta petualangan',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 17,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Jalur belajar',
+                        style: TextStyle(
+                          color: Color(0xFF144A69),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const Text(
+                        'Peta petualangan',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 23,
+                        ),
+                      ),
+                      Text(
+                        '${widget.completed.length} / ${widget.lessons.length} level selesai',
+                        style: const TextStyle(
+                          color: Color(0xFFECFAFF),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 IconButton(
@@ -131,14 +153,14 @@ class _LearningPathState extends State<LearningPath> {
               ],
             ),
           ),
-          SizedBox(
-            height: math.min(
-              MediaQuery.sizeOf(context).width < 600 ? 320 : 530,
-              math.max(220, MediaQuery.sizeOf(context).height - 230),
-            ),
+          Expanded(
             child: ListView.builder(
               controller: _scroll,
               reverse: true,
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.paddingOf(context).bottom + 96,
+                top: 24,
+              ),
               itemExtent: _stopExtent,
               itemCount: widget.lessons.length,
               itemBuilder: (context, index) {
@@ -151,6 +173,8 @@ class _LearningPathState extends State<LearningPath> {
                       level: index + 1,
                       lesson: lesson,
                       done: widget.completed.contains(lesson.id),
+                      active: index + 1 == activeLevel,
+                      allDone: widget.completed.length == widget.lessons.length,
                       unlocked:
                           index == 0 ||
                           widget.completed.contains(
@@ -168,17 +192,6 @@ class _LearningPathState extends State<LearningPath> {
               },
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 9, 16, 16),
-            child: Text(
-              'Mulai dari bawah • ikuti kapal menuju pulau harta karun',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -190,6 +203,8 @@ class _MapStop extends StatelessWidget {
     required this.level,
     required this.lesson,
     required this.done,
+    required this.active,
+    required this.allDone,
     required this.unlocked,
     required this.animate,
     required this.justUnlocked,
@@ -199,6 +214,8 @@ class _MapStop extends StatelessWidget {
   final int level;
   final Lesson lesson;
   final bool done;
+  final bool active;
+  final bool allDone;
   final bool unlocked;
   final bool animate;
   final bool justUnlocked;
@@ -214,105 +231,158 @@ class _MapStop extends StatelessWidget {
           constraints.maxWidth - shift.abs() * 2 - 20,
           286.0,
         );
-        return Transform.translate(
-          offset: Offset(shift, 0),
-          child: Center(
-            child: SizedBox(
-              width: cardWidth,
-              child: Column(
-                children: [
-                  Semantics(
-                    label: island
-                        ? 'Pulau harta karun level $level'
-                        : 'Kapal level $level',
-                    child: _AnimatedMapIcon(
-                      island: island,
-                      animate: animate,
-                      muted: !unlocked,
-                      opened: done,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Material(
-                    color: unlocked
-                        ? Colors.white.withValues(alpha: .95)
-                        : const Color(0xFFE3F0F3),
-                    borderRadius: BorderRadius.circular(18),
-                    elevation: unlocked ? 4 : 0,
-                    child: ListTile(
-                      dense: true,
-                      onTap: unlocked ? onOpen : null,
-                      shape: RoundedRectangleBorder(
+        return Stack(
+          children: [
+            Transform.translate(
+              offset: Offset(shift, active ? 42 : 20),
+              child: Center(
+                child: SizedBox(
+                  width: cardWidth,
+                  child: Column(
+                    children: [
+                      Semantics(
+                        label: island
+                            ? 'Pulau harta karun level $level'
+                            : 'Kapal level $level',
+                        child: _AnimatedMapIcon(
+                          island: island,
+                          animate: animate,
+                          muted: !unlocked,
+                          opened: done,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Material(
+                        color: unlocked
+                            ? Colors.white.withValues(alpha: .95)
+                            : const Color(0xFFE3F0F3),
                         borderRadius: BorderRadius.circular(18),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 2,
-                      ),
-                      leading: CircleAvatar(
-                        radius: 17,
-                        backgroundColor: island
-                            ? const Color(0xFFFFDC76)
-                            : const Color(0xFFD7F1FA),
-                        child: Text(
-                          '$level',
-                          style: const TextStyle(
-                            color: _ink,
-                            fontWeight: FontWeight.w900,
+                        elevation: unlocked ? 4 : 0,
+                        child: ListTile(
+                          dense: true,
+                          onTap: unlocked ? onOpen : null,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 2,
+                          ),
+                          leading: CircleAvatar(
+                            radius: 17,
+                            backgroundColor: island
+                                ? const Color(0xFFFFDC76)
+                                : const Color(0xFFD7F1FA),
+                            child: Text(
+                              '$level',
+                              style: const TextStyle(
+                                color: _ink,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                          title: Text(
+                            lesson.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: _ink,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          subtitle: Text(
+                            island && !done
+                                ? '+250 XP • ${lesson.description}'
+                                : done
+                                ? 'Selesai ✓'
+                                : unlocked
+                                ? lesson.description
+                                : 'Selesaikan level sebelumnya',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF47647A),
+                            ),
+                          ),
+                          trailing: Icon(
+                            done
+                                ? Icons.check_circle_rounded
+                                : unlocked
+                                ? Icons.play_circle_fill_rounded
+                                : Icons.lock_rounded,
+                            size: 23,
+                            color: done
+                                ? const Color(0xFF168567)
+                                : unlocked
+                                ? _deep
+                                : const Color(0xFF7996A4),
                           ),
                         ),
                       ),
-                      title: Text(
-                        lesson.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: _ink,
-                          fontWeight: FontWeight.w900,
+                      if (justUnlocked)
+                        const Text(
+                          'TERBUKA!',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
-                      ),
-                      subtitle: Text(
-                        island && !done
-                            ? '+250 XP • ${lesson.description}'
-                            : done
-                            ? 'Selesai ✓'
-                            : unlocked
-                            ? lesson.description
-                            : 'Selesaikan level sebelumnya',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF47647A),
-                        ),
-                      ),
-                      trailing: Icon(
-                        done
-                            ? Icons.check_circle_rounded
-                            : unlocked
-                            ? Icons.play_circle_fill_rounded
-                            : Icons.lock_rounded,
-                        size: 23,
-                        color: done
-                            ? const Color(0xFF168567)
-                            : unlocked
-                            ? _deep
-                            : const Color(0xFF7996A4),
-                      ),
-                    ),
+                    ],
                   ),
-                  if (justUnlocked)
-                    const Text(
-                      'TERBUKA!',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                ],
+                ),
               ),
             ),
-          ),
+            if (active)
+              Positioned(
+                top: 0,
+                left: level.isOdd ? null : 8,
+                right: level.isOdd ? 8 : null,
+                child: MotionReveal(
+                  key: ValueKey('guide-$level'),
+                  child: Column(
+                    children: [
+                      Container(
+                        constraints: const BoxConstraints(maxWidth: 120),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x300D5477),
+                              blurRadius: 8,
+                              offset: Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          allDone
+                              ? 'Hebat! Semua level selesai.'
+                              : island
+                              ? 'Buka peti Treasure ini!'
+                              : 'Ayo selesaikan level $level!',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: _ink,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                      SharkMascot(
+                        size: 68,
+                        animate: animate,
+                        mood: allDone ? SharkMood.celebrate : SharkMood.greet,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         );
       },
     );

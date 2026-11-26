@@ -38,6 +38,12 @@ class LearningProgress {
     this.displayName,
     this.dailyGoal,
     this.motion = true,
+    this.ownedAvatars = const {},
+    this.avatarId = -1,
+    this.ownedSkins = const {},
+    this.skinId = -1,
+    this.boosters = const {},
+    this.activeBoost = 0,
   });
 
   factory LearningProgress.fromJson(Map<String, dynamic> data) {
@@ -53,6 +59,14 @@ class LearningProgress {
       displayName: data['displayName'] as String?,
       dailyGoal: data['dailyGoal'] as int?,
       motion: data['motion'] as bool? ?? true,
+      ownedAvatars: Set<int>.from(data['ownedAvatars'] as List? ?? []),
+      avatarId: data['avatarId'] as int? ?? -1,
+      ownedSkins: Set<int>.from(data['ownedSkins'] as List? ?? []),
+      skinId: data['skinId'] as int? ?? -1,
+      boosters: (data['boosters'] as Map? ?? {}).map(
+        (key, value) => MapEntry(int.parse(key.toString()), value as int),
+      ),
+      activeBoost: data['activeBoost'] as int? ?? 0,
     );
   }
 
@@ -67,6 +81,12 @@ class LearningProgress {
   final String? displayName;
   final int? dailyGoal;
   final bool motion;
+  final Set<int> ownedAvatars;
+  final int avatarId;
+  final Set<int> ownedSkins;
+  final int skinId;
+  final Map<int, int> boosters;
+  final int activeBoost;
 
   Map<String, dynamic> toJson() => {
     'completed': completed.toList(),
@@ -80,6 +100,12 @@ class LearningProgress {
     'displayName': displayName,
     'dailyGoal': dailyGoal,
     'motion': motion,
+    'ownedAvatars': ownedAvatars.toList(),
+    'avatarId': avatarId,
+    'ownedSkins': ownedSkins.toList(),
+    'skinId': skinId,
+    'boosters': boosters.map((key, value) => MapEntry('$key', value)),
+    'activeBoost': activeBoost,
   };
 
   int lessonsOn(int day) => lastDay == day ? lessonsToday : 0;
@@ -92,10 +118,62 @@ class LearningProgress {
 
   int rewardXp(String lessonId, bool perfect, {int? level}) {
     if (completed.contains(lessonId)) return 0;
-    final knownIndex = lessons.indexWhere((lesson) => lesson.id == lessonId);
-    final actualLevel = knownIndex < 0 ? level ?? 0 : knownIndex + 1;
-    return isTreasureLevel(actualLevel) ? 250 : 25;
+    final actualLevel = _levelOf(lessonId, level);
+    final base = isTreasureLevel(actualLevel) ? 250 : 25;
+    final boost = boosters[activeBoost] ?? 0;
+    return base + (boost > 0 ? (base * activeBoost / 100).round() : 0);
   }
+
+  int _levelOf(String lessonId, int? fallback) {
+    final knownIndex = lessons.indexWhere((lesson) => lesson.id == lessonId);
+    return knownIndex < 0 ? fallback ?? 0 : knownIndex + 1;
+  }
+
+  LearningProgress buyAvatar(int id) {
+    if (id < 0 || id >= 5 || gems < 15 || ownedAvatars.contains(id)) {
+      return this;
+    }
+    return copyWith(
+      gems: gems - 15,
+      ownedAvatars: {...ownedAvatars, id},
+      avatarId: id,
+    );
+  }
+
+  LearningProgress equipAvatar(int id) =>
+      ownedAvatars.contains(id) ? copyWith(avatarId: id) : this;
+
+  LearningProgress buySkin(int id) {
+    if (id < 0 || id >= 5 || gems < 25 || ownedSkins.contains(id)) return this;
+    return copyWith(
+      gems: gems - 25,
+      ownedSkins: {...ownedSkins, id},
+      skinId: id,
+    );
+  }
+
+  LearningProgress equipSkin(int id) =>
+      ownedSkins.contains(id) ? copyWith(skinId: id) : this;
+
+  static int boostPrice(int percent) => switch (percent) {
+    5 => 10,
+    7 => 15,
+    10 => 20,
+    _ => 0,
+  };
+
+  LearningProgress buyBoost(int percent) {
+    final price = boostPrice(percent);
+    if (price == 0 || gems < price) return this;
+    return copyWith(
+      gems: gems - price,
+      boosters: {...boosters, percent: (boosters[percent] ?? 0) + 1},
+      activeBoost: activeBoost == 0 ? percent : activeBoost,
+    );
+  }
+
+  LearningProgress equipBoost(int percent) =>
+      (boosters[percent] ?? 0) > 0 ? copyWith(activeBoost: percent) : this;
 
   LearningProgress finish(
     String lessonId,
@@ -105,14 +183,21 @@ class LearningProgress {
   }) {
     final first = !completed.contains(lessonId);
     final usedFreeze = lastDay == day - 2 && freezes > 0;
+    final consumedBoost = first && (boosters[activeBoost] ?? 0) > 0;
     return copyWith(
       completed: {...completed, lessonId},
       xp: xp + rewardXp(lessonId, perfect, level: level),
-      gems: gems + (first ? 10 : 0),
+      gems:
+          gems +
+          (first ? (isTreasureLevel(_levelOf(lessonId, level)) ? 15 : 5) : 0),
       streak: lastDay == day ? streak : activeStreak(day) + 1,
       lastDay: day,
       lessonsToday: lessonsOn(day) + 1,
       freezes: freezes - (usedFreeze ? 1 : 0),
+      boosters: consumedBoost
+          ? {...boosters, activeBoost: boosters[activeBoost]! - 1}
+          : boosters,
+      activeBoost: consumedBoost ? 0 : activeBoost,
     );
   }
 
@@ -128,6 +213,12 @@ class LearningProgress {
     String? displayName,
     int? dailyGoal,
     bool? motion,
+    Set<int>? ownedAvatars,
+    int? avatarId,
+    Set<int>? ownedSkins,
+    int? skinId,
+    Map<int, int>? boosters,
+    int? activeBoost,
   }) {
     return LearningProgress(
       completed: completed ?? this.completed,
@@ -141,6 +232,12 @@ class LearningProgress {
       displayName: displayName ?? this.displayName,
       dailyGoal: dailyGoal ?? this.dailyGoal,
       motion: motion ?? this.motion,
+      ownedAvatars: ownedAvatars ?? this.ownedAvatars,
+      avatarId: avatarId ?? this.avatarId,
+      ownedSkins: ownedSkins ?? this.ownedSkins,
+      skinId: skinId ?? this.skinId,
+      boosters: boosters ?? this.boosters,
+      activeBoost: activeBoost ?? this.activeBoost,
     );
   }
 }

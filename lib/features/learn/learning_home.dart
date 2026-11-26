@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -9,6 +11,7 @@ import 'learning_progress.dart';
 import 'learning_path.dart';
 import 'learning_tab_bar.dart';
 import 'lesson_page.dart';
+import 'profile_art.dart';
 import 'rank.dart';
 
 const _navy = Color(0xFF103552);
@@ -52,6 +55,32 @@ class _LearningHomeState extends State<LearningHome> {
   bool _saving = false;
   bool _lessonOpen = false;
   String? _recentlyCompleted;
+  Timer? _dayRefresh;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleDayRefresh();
+  }
+
+  void _scheduleDayRefresh() {
+    final now = DateTime.now();
+    final midnight = DateTime(now.year, now.month, now.day + 1);
+    _dayRefresh = Timer(
+      midnight.difference(now) + const Duration(milliseconds: 100),
+      () {
+        if (!mounted) return;
+        setState(() {});
+        _scheduleDayRefresh();
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _dayRefresh?.cancel();
+    super.dispose();
+  }
 
   Future<void> _save(LearningProgress next) async {
     setState(() => _saving = true);
@@ -85,24 +114,27 @@ class _LearningHomeState extends State<LearningHome> {
     try {
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
-          builder: (context) => LessonPage(
-            lesson: lesson,
-            animateMascot: progress.motion,
-            onComplete: (perfect) async {
-              final current = _progress ?? progress;
-              final level =
-                  lessons.indexWhere((entry) => entry.id == lesson.id) + 1;
-              final xp = current.rewardXp(lesson.id, perfect, level: level);
-              await _save(
-                current.finish(
-                  lesson.id,
-                  perfect,
-                  localDay(DateTime.now()),
-                  level: level,
-                ),
-              );
-              return xp;
-            },
+          builder: (context) => SharkSkinScope(
+            skinId: (_progress ?? progress).skinId,
+            child: LessonPage(
+              lesson: lesson,
+              animateMascot: progress.motion,
+              onComplete: (perfect) async {
+                final current = _progress ?? progress;
+                final level =
+                    lessons.indexWhere((entry) => entry.id == lesson.id) + 1;
+                final xp = current.rewardXp(lesson.id, perfect, level: level);
+                await _save(
+                  current.finish(
+                    lesson.id,
+                    perfect,
+                    localDay(DateTime.now()),
+                    level: level,
+                  ),
+                );
+                return xp;
+              },
+            ),
           ),
         ),
       );
@@ -133,6 +165,121 @@ class _LearningHomeState extends State<LearningHome> {
     if (mounted && updated != null) {
       _update(progress.copyWith(displayName: updated));
     }
+  }
+
+  Future<void> _editProfile(LearningProgress progress, String name) async {
+    final choice = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Edit profil',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
+              const Text('Pilih art profil yang sudah dibuka di Toko.'),
+              const SizedBox(height: 18),
+              Wrap(
+                spacing: 14,
+                runSpacing: 14,
+                children: [
+                  for (var id = 0; id < avatarNames.length; id++)
+                    InkWell(
+                      onTap: progress.ownedAvatars.contains(id)
+                          ? () => Navigator.of(sheetContext).pop(id)
+                          : null,
+                      child: Opacity(
+                        opacity: progress.ownedAvatars.contains(id) ? 1 : .45,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ProfileArt(id: id, size: 62),
+                            Text(
+                              avatarNames[id],
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                            if (!progress.ownedAvatars.contains(id))
+                              const Icon(Icons.lock_rounded, size: 14),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.of(sheetContext).pop(-2),
+                icon: const Icon(Icons.edit_rounded),
+                label: const Text('Ubah nama'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(sheetContext).pop(-3),
+                child: const Text('Lihat art profil di Toko'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!mounted || choice == null) return;
+    if (choice >= 0) _update(progress.equipAvatar(choice));
+    if (choice == -2) _rename(progress, name);
+    if (choice == -3) setState(() => _tab = _Destination.shop);
+  }
+
+  void _showRankList() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * .76,
+          child: Column(
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
+                child: Text(
+                  'Daftar semua rank',
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 24),
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  children: [
+                    for (final tier in RankTier.values)
+                      ListTile(
+                        leading: RankBadge(rank: tier, size: 42),
+                        title: Text(
+                          tier.label,
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        subtitle: Text(
+                          tier.next == null
+                              ? '${tier.minXp}+ XP'
+                              : '${tier.minXp}–${tier.next!.minXp - 1} XP',
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Tutup'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -174,97 +321,84 @@ class _LearningHomeState extends State<LearningHome> {
         return LayoutBuilder(
           builder: (context, constraints) {
             final wide = constraints.maxWidth >= 744;
-            final showAside =
-                constraints.maxWidth >= 1120 && _tab == _Destination.learn;
             final content = switch (_tab) {
-              _Destination.learn => _learn(progress, goal, day, showAside),
+              _Destination.learn => <Widget>[],
               _Destination.quests => _quests(progress, goal, day),
               _Destination.ranks => _ranks(progress, name),
               _Destination.shop => _shop(progress),
               _Destination.profile => _profile(progress, name, goal, day),
             };
-            return Scaffold(
-              extendBody: true,
-              backgroundColor: _tab == _Destination.learn
-                  ? const Color(0xFFB8EAF4)
-                  : const Color(0xFFF3F8FC),
-              appBar: AppBar(
-                title: const _Brand(),
-                actions: [
-                  _Metric(
-                    icon: Icons.local_fire_department_rounded,
-                    value: '${progress.activeStreak(day)}',
-                    label: 'hari streak',
-                    color: _coral,
-                  ),
-                  const SizedBox(width: 12),
-                  _Metric(
-                    icon: Icons.diamond_rounded,
-                    value: '${progress.gems}',
-                    label: 'gems',
-                    color: _blue,
-                  ),
-                  const SizedBox(width: 16),
-                ],
-              ),
-              bottomNavigationBar: LearningTabBar(
-                selectedIndex: _tab.index,
-                onSelected: (index) {
-                  final next = _Destination.values[index];
-                  if (next == _tab) return;
-                  setState(() {
-                    _tab = next;
-                    _recentlyCompleted = null;
-                  });
-                },
-                destinations: [
-                  for (final page in _Destination.values)
-                    NavigationDestination(
-                      icon: Icon(page.icon),
-                      label: page.label,
+            return SharkSkinScope(
+              skinId: progress.skinId,
+              child: Scaffold(
+                extendBody: true,
+                backgroundColor: _tab == _Destination.learn
+                    ? const Color(0xFFB8EAF4)
+                    : const Color(0xFFF3F8FC),
+                appBar: AppBar(
+                  title: const _Brand(),
+                  actions: [
+                    _Metric(
+                      icon: Icons.local_fire_department_rounded,
+                      value: '${progress.activeStreak(day)}',
+                      label: 'hari streak',
+                      color: _coral,
                     ),
-                ],
-              ),
-              body: SafeArea(
-                bottom: false,
-                child: Builder(
-                  builder: (context) => Center(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: showAside ? 1040 : 704,
+                    const SizedBox(width: 12),
+                    _Metric(
+                      icon: Icons.diamond_rounded,
+                      value: '${progress.gems}',
+                      label: 'gems',
+                      color: _blue,
+                    ),
+                    const SizedBox(width: 16),
+                  ],
+                ),
+                bottomNavigationBar: LearningTabBar(
+                  selectedIndex: _tab.index,
+                  onSelected: (index) {
+                    final next = _Destination.values[index];
+                    if (next == _tab) return;
+                    setState(() {
+                      _tab = next;
+                      _recentlyCompleted = null;
+                    });
+                  },
+                  destinations: [
+                    for (final page in _Destination.values)
+                      NavigationDestination(
+                        icon: Icon(page.icon),
+                        label: page.label,
                       ),
-                      child: ListView(
-                        key: ValueKey(_tab),
-                        padding: EdgeInsets.fromLTRB(
-                          wide ? 32 : 16,
-                          wide ? 28 : 12,
-                          wide ? 32 : 16,
-                          MediaQuery.paddingOf(context).bottom + 16,
-                        ),
-                        children: showAside
-                            ? [
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: content,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 22),
-                                    SizedBox(
-                                      width: 250,
-                                      child: _questCard(progress, goal, day),
-                                    ),
-                                  ],
+                  ],
+                ),
+                body: SafeArea(
+                  bottom: false,
+                  child: _tab == _Destination.learn
+                      ? LearningPath(
+                          lessons: lessons,
+                          completed: progress.completed,
+                          animate: progress.motion,
+                          recentlyCompleted: _recentlyCompleted,
+                          onOpen: (lesson) => _openLesson(lesson, progress),
+                        )
+                      : Builder(
+                          builder: (context) => Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 704),
+                              child: ListView(
+                                key: ValueKey(_tab),
+                                padding: EdgeInsets.fromLTRB(
+                                  wide ? 32 : 16,
+                                  wide ? 28 : 12,
+                                  wide ? 32 : 16,
+                                  MediaQuery.paddingOf(context).bottom + 16,
                                 ),
-                              ]
-                            : content,
-                      ),
-                    ),
-                  ),
+                                children: content,
+                              ),
+                            ),
+                          ),
+                        ),
                 ),
               ),
             );
@@ -272,35 +406,6 @@ class _LearningHomeState extends State<LearningHome> {
         );
       },
     );
-  }
-
-  List<Widget> _learn(
-    LearningProgress progress,
-    int goal,
-    int day,
-    bool showAside,
-  ) {
-    final finished = progress.completed.length;
-    return [
-      const _Heading(
-        title: 'Jalur belajar',
-        detail: 'Bahasa Inggris · 100 level',
-      ),
-      const SizedBox(height: 18),
-      _CourseBanner(finished: finished, animateMascot: progress.motion),
-      const SizedBox(height: 25),
-      LearningPath(
-        lessons: lessons,
-        completed: progress.completed,
-        animate: progress.motion,
-        recentlyCompleted: _recentlyCompleted,
-        onOpen: (lesson) => _openLesson(lesson, progress),
-      ),
-      if (!showAside) ...[
-        const SizedBox(height: 24),
-        _questCard(progress, goal, day),
-      ],
-    ];
   }
 
   Widget _questCard(LearningProgress progress, int goal, int day) {
@@ -425,6 +530,131 @@ class _LearningHomeState extends State<LearningHome> {
         ),
       ],
     ),
+    const SizedBox(height: 14),
+    _Panel(
+      children: [
+        const _Title(icon: Icons.bolt_rounded, title: 'XP Boosters'),
+        const SizedBox(height: 8),
+        const Text(
+          'Pakai satu booster pada penyelesaian level baru berikutnya.',
+        ),
+        for (final percent in [5, 7, 10])
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                Text(
+                  '+$percent% XP',
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                Text(
+                  'Stok ${progress.boosters[percent] ?? 0}${progress.activeBoost == percent ? ' · aktif' : ''}',
+                ),
+                if ((progress.boosters[percent] ?? 0) > 0 &&
+                    progress.activeBoost != percent)
+                  TextButton(
+                    onPressed: _saving
+                        ? null
+                        : () => _update(progress.equipBoost(percent)),
+                    child: const Text('Pakai'),
+                  ),
+                FilledButton.tonal(
+                  onPressed:
+                      _saving ||
+                          progress.gems < LearningProgress.boostPrice(percent)
+                      ? null
+                      : () => _update(
+                          progress.buyBoost(percent),
+                          message: 'Booster $percent% dibeli.',
+                        ),
+                  child: Text(
+                    'Beli ${LearningProgress.boostPrice(percent)} Gems',
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    ),
+    const SizedBox(height: 14),
+    _Panel(
+      children: [
+        const _Title(icon: Icons.palette_rounded, title: 'Art profil'),
+        const SizedBox(height: 8),
+        const Text('Lima art eksklusif · 15 Gems per art.'),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (var id = 0; id < avatarNames.length; id++)
+              _StoreChoice(
+                name: avatarNames[id],
+                price: 15,
+                owned: progress.ownedAvatars.contains(id),
+                active: progress.avatarId == id,
+                canBuy: progress.gems >= 15,
+                preview: ProfileArt(id: id, size: 58),
+                onPressed: _saving
+                    ? null
+                    : () => _update(
+                        progress.ownedAvatars.contains(id)
+                            ? progress.equipAvatar(id)
+                            : progress.buyAvatar(id),
+                        message: progress.ownedAvatars.contains(id)
+                            ? '${avatarNames[id]} dipakai.'
+                            : '${avatarNames[id]} dibeli.',
+                      ),
+              ),
+          ],
+        ),
+      ],
+    ),
+    const SizedBox(height: 14),
+    _Panel(
+      children: [
+        const _Title(
+          icon: Icons.face_retouching_natural_rounded,
+          title: 'Skin hiu',
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Lima kostum maskot · 25 Gems per skin. Skin terpasang muncul di peta dan quiz.',
+        ),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (var id = 0; id < sharkSkinNames.length; id++)
+              _StoreChoice(
+                name: sharkSkinNames[id],
+                price: 25,
+                owned: progress.ownedSkins.contains(id),
+                active: progress.skinId == id,
+                canBuy: progress.gems >= 25,
+                preview: SharkSkinScope(
+                  skinId: id,
+                  child: SharkMascot(size: 67, animate: false),
+                ),
+                onPressed: _saving
+                    ? null
+                    : () => _update(
+                        progress.ownedSkins.contains(id)
+                            ? progress.equipSkin(id)
+                            : progress.buySkin(id),
+                        message: progress.ownedSkins.contains(id)
+                            ? '${sharkSkinNames[id]} dipakai.'
+                            : '${sharkSkinNames[id]} dibeli.',
+                      ),
+              ),
+          ],
+        ),
+      ],
+    ),
   ];
 
   List<Widget> _profile(
@@ -433,22 +663,45 @@ class _LearningHomeState extends State<LearningHome> {
     int goal,
     int day,
   ) => [
-    _Heading(title: name, detail: widget.profile.email),
+    const _Heading(title: 'Profil', detail: 'Akun petualanganmu'),
     const SizedBox(height: 18),
     _Panel(
       children: [
         const _Title(icon: Icons.person_rounded, title: 'Profil pelajar'),
         const SizedBox(height: 12),
+        Row(
+          children: [
+            ProfileArt(id: progress.avatarId, size: 78),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: _navy,
+                    ),
+                  ),
+                  Text(
+                    widget.profile.email,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: _muted),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        const Text('Statistik', style: TextStyle(fontWeight: FontWeight.w900)),
+        const SizedBox(height: 8),
         Wrap(
           spacing: 18,
           runSpacing: 10,
           children: [
-            _Metric(
-              icon: Icons.bolt_rounded,
-              value: '${progress.xp}',
-              label: 'XP',
-              color: _blue,
-            ),
             _Metric(
               icon: Icons.local_fire_department_rounded,
               value: '${progress.activeStreak(day)}',
@@ -465,15 +718,29 @@ class _LearningHomeState extends State<LearningHome> {
         ),
         const SizedBox(height: 16),
         OutlinedButton(
-          onPressed: _saving ? null : () => _rename(progress, name),
-          child: const Text('Ubah nama'),
+          onPressed: _saving ? null : () => _editProfile(progress, name),
+          child: const Text('Edit Profil'),
         ),
       ],
     ),
     const SizedBox(height: 14),
     _Panel(
       children: [
-        const _Title(icon: Icons.military_tech_rounded, title: 'Rank kamu'),
+        Row(
+          children: [
+            const Expanded(
+              child: _Title(
+                icon: Icons.military_tech_rounded,
+                title: 'Rank kamu',
+              ),
+            ),
+            IconButton(
+              tooltip: 'Lihat semua rank',
+              onPressed: _showRankList,
+              icon: const Icon(Icons.info_outline_rounded, color: _blue),
+            ),
+          ],
+        ),
         const SizedBox(height: 14),
         Row(
           children: [
@@ -550,93 +817,75 @@ class _LearningHomeState extends State<LearningHome> {
   ];
 }
 
-class _CourseBanner extends StatelessWidget {
-  const _CourseBanner({required this.finished, required this.animateMascot});
+class _StoreChoice extends StatelessWidget {
+  const _StoreChoice({
+    required this.name,
+    required this.price,
+    required this.owned,
+    required this.active,
+    required this.canBuy,
+    required this.preview,
+    required this.onPressed,
+  });
 
-  final int finished;
-  final bool animateMascot;
+  final String name;
+  final int price;
+  final bool owned;
+  final bool active;
+  final bool canBuy;
+  final Widget preview;
+  final VoidCallback? onPressed;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      clipBehavior: Clip.hardEdge,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(23),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0D3757), Color(0xFF116898)],
+  Widget build(BuildContext context) => Container(
+    width: 116,
+    padding: const EdgeInsets.all(8),
+    decoration: BoxDecoration(
+      color: active ? const Color(0xFFE4F5FF) : const Color(0xFFF5FAFD),
+      border: Border.all(
+        color: active ? _blue : _outline,
+        width: active ? 2 : 1,
+      ),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Column(
+      children: [
+        SizedBox(height: 70, child: Center(child: preview)),
+        Text(
+          name,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
         ),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final art = (constraints.maxWidth * .36).clamp(88.0, 176.0);
-          const artInset = 12.0;
-          return ConstrainedBox(
-            constraints: BoxConstraints(minHeight: art + artInset * 2),
-            child: Stack(
-              alignment: Alignment.centerLeft,
-              children: [
-                Positioned(
-                  right: -art * .07,
-                  bottom: -art * .18,
-                  child: Container(
-                    width: art * 1.28,
-                    height: art * 1.28,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0x224DC5F5),
-                      border: Border.all(
-                        color: const Color(0x55A9E8FF),
-                        width: 2,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: artInset,
-                  top: artInset,
-                  bottom: artInset,
-                  child: Center(
-                    child: SharkMascot(size: art, animate: animateMascot),
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(20, 22, art + artInset * 2, 22),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Petualangan Bahasa Inggris',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 26,
-                          height: 1.05,
-                          letterSpacing: -.6,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'Naik level dan cari pulau harta karun.',
-                        style: TextStyle(color: Color(0xFFDAF2FF), height: 1.4),
-                      ),
-                      const SizedBox(height: 13),
-                      Text(
-                        '$finished / ${lessons.length} lesson selesai',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+        Text(
+          owned ? 'Terbuka' : 'Terkunci',
+          style: const TextStyle(fontSize: 11, color: _muted),
+        ),
+        const SizedBox(height: 7),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.tonal(
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              textStyle: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
             ),
-          );
-        },
-      ),
-    );
-  }
+            onPressed: active || (!owned && !canBuy) ? null : onPressed,
+            child: Text(
+              active
+                  ? 'Dipakai'
+                  : owned
+                  ? 'Pakai'
+                  : 'Beli $price',
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _Brand extends StatelessWidget {

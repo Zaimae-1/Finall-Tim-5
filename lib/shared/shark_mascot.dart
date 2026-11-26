@@ -6,6 +6,27 @@ import 'shark_rig.dart';
 
 enum SharkMood { swim, greet, correct, encourage, celebrate }
 
+const sharkSkinNames = [
+  'Kapten Laut',
+  'Penyelam',
+  'Raja Samudra',
+  'Penjelajah',
+  'Pelaut Klasik',
+];
+
+class SharkSkinScope extends InheritedWidget {
+  const SharkSkinScope({super.key, required this.skinId, required super.child});
+  final int skinId;
+
+  static int of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<SharkSkinScope>()?.skinId ??
+      -1;
+
+  @override
+  bool updateShouldNotify(SharkSkinScope oldWidget) =>
+      oldWidget.skinId != skinId;
+}
+
 class SharkMascot extends StatefulWidget {
   const SharkMascot({
     super.key,
@@ -114,10 +135,14 @@ class _SharkMascotState extends State<SharkMascot>
               widget.size,
               constraints.biggest.shortestSide,
             );
+            final skinId = SharkSkinScope.of(context);
             return Center(
               widthFactor: 1,
               heightFactor: 1,
-              child: SizedBox.square(dimension: size, child: _buildPose(size)),
+              child: SizedBox.square(
+                dimension: size,
+                child: _buildPose(size, skinId),
+              ),
             );
           },
         ),
@@ -125,7 +150,7 @@ class _SharkMascotState extends State<SharkMascot>
     );
   }
 
-  Widget _buildPose(double size) {
+  Widget _buildPose(double size, int skinId) {
     return AnimatedBuilder(
       animation: _ticks,
       builder: (context, _) {
@@ -178,16 +203,23 @@ class _SharkMascotState extends State<SharkMascot>
                 angle: swim * .08 + tilt,
                 child: Transform.scale(
                   scale: scale,
-                  child: rig != null && _motionEnabled
-                      ? CustomPaint(
-                          painter: _SharkPose(
-                            rig: rig,
-                            tail: math.sin(phase * 2),
-                            fin: math.sin(phase * 2 + .8) * .34 + extraFin,
-                            blink: blink * .96,
-                          ),
-                        )
-                      : const Image(image: _asset, fit: BoxFit.contain),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      rig != null && _motionEnabled
+                          ? CustomPaint(
+                              painter: _SharkPose(
+                                rig: rig,
+                                tail: math.sin(phase * 2),
+                                fin: math.sin(phase * 2 + .8) * .34 + extraFin,
+                                blink: blink * .96,
+                              ),
+                            )
+                          : const Image(image: _asset, fit: BoxFit.contain),
+                      if (skinId >= 0 && skinId < sharkSkinNames.length)
+                        CustomPaint(painter: _SharkCostume(skinId)),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -254,4 +286,114 @@ class _Bubbles extends CustomPainter {
 
   @override
   bool shouldRepaint(_Bubbles oldDelegate) => oldDelegate.progress != progress;
+}
+
+class _SharkCostume extends CustomPainter {
+  const _SharkCostume(this.id);
+  final int id;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.scale(size.width / 100, size.height / 100);
+    final p = Paint()..isAntiAlias = true;
+    switch (id) {
+      case 0: // Captain's tricorn.
+        p.color = const Color(0xFF153752);
+        canvas.drawPath(
+          Path()
+            ..moveTo(52, 30)
+            ..quadraticBezierTo(67, 34, 91, 24)
+            ..lineTo(84, 18)
+            ..lineTo(63, 19)
+            ..lineTo(53, 24)
+            ..close(),
+          p,
+        );
+        p.color = const Color(0xFFFFD36A);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            const Rect.fromLTWH(65, 23, 13, 3),
+            const Radius.circular(2),
+          ),
+          p,
+        );
+      case 1: // Diver goggles.
+        p.color = const Color(0xFF0A5679);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            const Rect.fromLTWH(61, 29, 28, 15),
+            const Radius.circular(7),
+          ),
+          p,
+        );
+        p.color = const Color(0xFFB9F3FF);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            const Rect.fromLTWH(64, 31, 22, 11),
+            const Radius.circular(5),
+          ),
+          p,
+        );
+        p.color = const Color(0x88FFFFFF);
+        canvas.drawOval(const Rect.fromLTWH(68, 32, 7, 3), p);
+      case 2: // Ocean crown.
+        p.color = const Color(0xFFFFCB55);
+        canvas.drawPath(
+          Path()
+            ..moveTo(62, 32)
+            ..lineTo(58, 18)
+            ..lineTo(66, 23)
+            ..lineTo(72, 12)
+            ..lineTo(79, 23)
+            ..lineTo(88, 17)
+            ..lineTo(86, 32)
+            ..close(),
+          p,
+        );
+        p.color = const Color(0xFF167AC1);
+        canvas.drawCircle(const Offset(73, 27), 2.5, p);
+      case 3: // Explorer's headband and compass.
+        p.color = const Color(0xFF1A846E);
+        canvas.drawPath(
+          Path()
+            ..moveTo(59, 27)
+            ..quadraticBezierTo(74, 20, 88, 27)
+            ..lineTo(87, 32)
+            ..quadraticBezierTo(73, 26, 60, 32)
+            ..close(),
+          p,
+        );
+        p.color = const Color(0xFFFFE5A0);
+        canvas.drawCircle(const Offset(72, 27), 3.5, p);
+        p.color = const Color(0xFF173F55);
+        canvas.drawCircle(const Offset(72, 27), 1.5, p);
+      case 4: // Sailor cap.
+        p.color = Colors.white;
+        canvas.drawPath(
+          Path()
+            ..moveTo(61, 28)
+            ..lineTo(64, 17)
+            ..quadraticBezierTo(75, 14, 86, 19)
+            ..lineTo(89, 29)
+            ..close(),
+          p,
+        );
+        p.color = const Color(0xFF164F7D);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            const Rect.fromLTWH(59, 27, 31, 6),
+            const Radius.circular(3),
+          ),
+          p,
+        );
+        p.color = const Color(0xFFF0BA4A);
+        canvas.drawCircle(const Offset(74, 25), 2, p);
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _SharkCostume oldDelegate) =>
+      oldDelegate.id != id;
 }
