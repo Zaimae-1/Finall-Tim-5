@@ -13,6 +13,7 @@ import 'learning_tab_bar.dart';
 import 'lesson_page.dart';
 import 'profile_art.dart';
 import 'rank.dart';
+import 'rank_list_sheet.dart';
 import 'rank_presentation.dart';
 
 const _navy = Color(0xFF103552);
@@ -262,48 +263,9 @@ class _LearningHomeState extends State<LearningHome> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (context) => SafeArea(
-        child: SizedBox(
-          height: MediaQuery.sizeOf(context).height * .76,
-          child: Column(
-            children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
-                child: Text(
-                  'Daftar semua rank',
-                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 24),
-                ),
-              ),
-              Expanded(
-                child: ListView(
-                  children: [
-                    for (final tier in RankTier.values)
-                      ListTile(
-                        leading: RankBadge(rank: tier, size: 42),
-                        title: Text(
-                          tier.label,
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                        subtitle: Text(
-                          tier.next == null
-                              ? '${tier.minXp}+ XP'
-                              : '${tier.minXp}–${tier.next!.minXp - 1} XP',
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(14),
-                child: FilledButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Tutup'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      backgroundColor: Colors.transparent,
+      builder: (context) =>
+          RankListSheet(current: rankForXp((_progress?.xp) ?? 0)),
     );
   }
 

@@ -39,6 +39,7 @@ void main() {
       isNull,
     );
     await _tap(tester, 'Pemula');
+    expect(find.byIcon(Icons.check_circle_rounded), findsWidgets);
     await _tap(tester, 'Lanjut');
     await _tap(tester, '1 lesson per hari');
     await _tap(tester, 'Lanjut');
@@ -684,6 +685,19 @@ void main() {
     final rankScroll = find.descendant(
       of: find.byType(BottomSheet),
       matching: find.byType(Scrollable),
+    );
+    await tester.drag(rankScroll, const Offset(0, -110));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.text('Gold'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Mulai pada 60 XP. 100 XP membuka Platinum.'),
+      findsOneWidget,
     );
     await tester.scrollUntilVisible(
       find.text('400–999 XP'),

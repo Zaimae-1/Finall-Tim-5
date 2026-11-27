@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -94,14 +96,18 @@ class _AuthFlowState extends State<AuthFlow> {
                 'Selami bahasa Inggris lewat latihan singkat setiap hari.',
           ),
           const SizedBox(height: 28),
-          FilledButton(
+          _WelcomeButton(
+            label: 'Mulai belajar',
+            icon: Icons.explore_rounded,
+            primary: true,
             onPressed: () => _openForm(_AuthMode.register),
-            child: const Text('Mulai belajar'),
           ),
           const SizedBox(height: 12),
-          OutlinedButton(
+          _WelcomeButton(
+            label: 'Aku sudah punya akun',
+            icon: Icons.login_rounded,
+            primary: false,
             onPressed: () => _openForm(_AuthMode.signIn),
-            child: const Text('Aku sudah punya akun'),
           ),
         ],
       ),
@@ -388,7 +394,7 @@ class _AuthPageState extends State<_AuthPage> {
               : 'Pilih target harianmu',
           description: levelStep
               ? 'Kursus Bahasa Inggris · Unit 1'
-              : 'Target ini dipakai untuk quest harian dan bisa diubah dari Profil.',
+              : 'Target ini dipakai untuk misi harianmu.',
         ),
         const SizedBox(height: 18),
         if (levelStep)
@@ -424,6 +430,90 @@ class _AuthPageState extends State<_AuthPage> {
   }
 }
 
+class _WelcomeButton extends StatefulWidget {
+  const _WelcomeButton({
+    required this.label,
+    required this.icon,
+    required this.primary,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool primary;
+  final VoidCallback onPressed;
+
+  @override
+  State<_WelcomeButton> createState() => _WelcomeButtonState();
+}
+
+class _WelcomeButtonState extends State<_WelcomeButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) => Listener(
+    onPointerDown: (_) => setState(() => _pressed = true),
+    onPointerUp: (_) => setState(() => _pressed = false),
+    onPointerCancel: (_) => setState(() => _pressed = false),
+    child: AnimatedScale(
+      scale: _pressed ? .97 : 1,
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 150),
+      curve: Curves.easeOutCubic,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: widget.primary
+              ? const LinearGradient(
+                  colors: [Color(0xFF0564A4), Color(0xFF0AA5CA)],
+                )
+              : null,
+          color: widget.primary ? null : Colors.white,
+          borderRadius: BorderRadius.circular(19),
+          border: Border.all(
+            color: widget.primary
+                ? const Color(0xFF66D8EF)
+                : const Color(0xFF8FC6DD),
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x26083D68),
+              blurRadius: 16,
+              offset: Offset(0, 7),
+            ),
+          ],
+        ),
+        child: widget.primary
+            ? FilledButton.icon(
+                onPressed: widget.onPressed,
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(19),
+                  ),
+                ),
+                icon: Icon(widget.icon),
+                label: Text(widget.label),
+              )
+            : OutlinedButton.icon(
+                onPressed: widget.onPressed,
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide.none,
+                  foregroundColor: _ink,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(19),
+                  ),
+                ),
+                icon: Icon(widget.icon),
+                label: Text(widget.label),
+              ),
+      ),
+    ),
+  );
+}
+
 class _SetupProgress extends StatelessWidget {
   const _SetupProgress({required this.step});
 
@@ -431,12 +521,58 @@ class _SetupProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 16),
-    child: LinearProgressIndicator(
-      value: (step + 1) / 3,
-      minHeight: 8,
-      borderRadius: BorderRadius.circular(8),
-      semanticsLabel: 'Langkah ${step + 1} dari 3',
+    padding: const EdgeInsets.only(bottom: 20),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.route_rounded, size: 16, color: _blue),
+            const SizedBox(width: 6),
+            Text(
+              'LANGKAH ${step + 1} DARI 3',
+              style: const TextStyle(
+                color: _ink,
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.3,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 9),
+        Semantics(
+          label: 'Langkah ${step + 1} dari 3',
+          child: Container(
+            height: 11,
+            decoration: BoxDecoration(
+              color: const Color(0xFFD1E8F3),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: (step + 1) / 3),
+                duration: MediaQuery.disableAnimationsOf(context)
+                    ? Duration.zero
+                    : const Duration(milliseconds: 450),
+                curve: Curves.easeOutCubic,
+                builder: (context, value, _) => FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: value,
+                  child: const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF075DAB), Color(0xFF2CC6D8)],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     ),
   );
 }
@@ -456,17 +592,78 @@ class _SetupChoice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.only(bottom: 10),
     child: Semantics(
       selected: selected,
-      child: OutlinedButton.icon(
-        onPressed: onTap,
-        icon: Icon(selected ? Icons.check_circle_rounded : icon),
-        label: Text(label),
-        style: OutlinedButton.styleFrom(
-          alignment: Alignment.centerLeft,
-          backgroundColor: selected ? const Color(0xFFDDEFFE) : Colors.white,
-          side: BorderSide(color: selected ? _blue : _line),
+      button: true,
+      child: AnimatedContainer(
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: selected
+                ? const [Color(0xFFDDF5FF), Color(0xFFF3FBFF)]
+                : const [Colors.white, Color(0xFFF1F9FD)],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? const Color(0xFF087DB6) : const Color(0xFFA9C9DA),
+            width: selected ? 2 : 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: selected
+                  ? const Color(0x2B0689BD)
+                  : const Color(0x14084368),
+              blurRadius: selected ? 16 : 9,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? const Color(0xFFB8E9F8)
+                          : const Color(0xFFE1F2F8),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(icon, color: _blue),
+                  ),
+                  const SizedBox(width: 13),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: _ink,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    selected
+                        ? Icons.check_circle_rounded
+                        : Icons.arrow_forward_ios_rounded,
+                    color: selected ? _blue : const Color(0xFF83A8BB),
+                    size: selected ? 25 : 17,
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     ),
@@ -493,85 +690,98 @@ class _PageLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final wide = constraints.maxWidth >= 840;
-            final inset = wide ? 40.0 : 20.0;
-            return SingleChildScrollView(
-              key: viewKey,
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: EdgeInsets.fromLTRB(inset, 12, inset, 28),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: wide ? 1000 : 470),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          if (showBack) ...[
-                            IconButton(
-                              tooltip: 'Kembali',
-                              onPressed: onBack,
-                              icon: const Icon(Icons.arrow_back_rounded),
-                            ),
-                            const SizedBox(width: 4),
-                          ],
-                          const Icon(
-                            Icons.waves_rounded,
-                            color: _blue,
-                            size: 27,
-                          ),
-                          const SizedBox(width: 8),
-                          const Flexible(
-                            child: Text(
-                              'LingoShark',
-                              style: TextStyle(
-                                color: _ink,
-                                fontSize: 23,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.8,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: wide ? 36 : 20),
-                      if (wide)
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFEAF9FF), Color(0xFFCBECF7), Color(0xFFF5FCFF)],
+          ),
+        ),
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final wide = constraints.maxWidth >= 840;
+              final inset = wide ? 40.0 : 20.0;
+              return SingleChildScrollView(
+                key: viewKey,
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: EdgeInsets.fromLTRB(inset, 12, inset, 28),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: wide ? 1000 : 470),
+                    child: Column(
+                      children: [
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Expanded(
-                              child: _OceanPanel(height: 440, message: message),
+                            if (showBack) ...[
+                              IconButton(
+                                tooltip: 'Kembali',
+                                onPressed: onBack,
+                                icon: const Icon(Icons.arrow_back_rounded),
+                              ),
+                              const SizedBox(width: 4),
+                            ],
+                            const Icon(
+                              Icons.waves_rounded,
+                              color: _blue,
+                              size: 27,
                             ),
-                            const SizedBox(width: 58),
-                            Expanded(
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 380,
-                                  ),
-                                  child: MotionReveal(child: content),
+                            const SizedBox(width: 8),
+                            const Flexible(
+                              child: Text(
+                                'LingoShark',
+                                style: TextStyle(
+                                  color: _ink,
+                                  fontSize: 23,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -0.8,
                                 ),
                               ),
                             ),
                           ],
-                        )
-                      else ...[
-                        _OceanPanel(
-                          height: compact ? 144 : 262,
-                          message: message,
                         ),
-                        SizedBox(height: compact ? 22 : 28),
-                        MotionReveal(child: content),
+                        SizedBox(height: wide ? 36 : 20),
+                        if (wide)
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: _OceanPanel(
+                                  height: 440,
+                                  message: message,
+                                ),
+                              ),
+                              const SizedBox(width: 58),
+                              Expanded(
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 380,
+                                    ),
+                                    child: MotionReveal(child: content),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        else ...[
+                          _OceanPanel(
+                            height: compact ? 144 : 262,
+                            message: message,
+                          ),
+                          SizedBox(height: compact ? 22 : 28),
+                          MotionReveal(child: content),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -612,98 +822,186 @@ class _PageIntro extends StatelessWidget {
   }
 }
 
-class _OceanPanel extends StatelessWidget {
+class _OceanPanel extends StatefulWidget {
   const _OceanPanel({required this.height, this.message});
 
   final double height;
   final String? message;
 
   @override
+  State<_OceanPanel> createState() => _OceanPanelState();
+}
+
+class _OceanPanelState extends State<_OceanPanel>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _tide = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 4400),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _tide.stop();
+      _tide.value = 0;
+    } else if (!_tide.isAnimating) {
+      _tide.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _tide.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(28),
+      borderRadius: BorderRadius.circular(30),
       child: SizedBox(
-        height: height,
+        height: widget.height,
         width: double.infinity,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [Color(0xFFE3F7FF), Color(0xFF9FDDF6)],
+        child: AnimatedBuilder(
+          animation: _tide,
+          builder: (context, _) => Stack(
+            fit: StackFit.expand,
+            children: [
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF074266),
+                      Color(0xFF098CB7),
+                      Color(0xFF8ADCF0),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            Positioned(
-              top: -height * .24,
-              right: -height * .10,
-              child: _Bubble(size: height * .70),
-            ),
-            Positioned(
-              bottom: -height * .35,
-              left: -height * .10,
-              child: _Bubble(size: height * .76),
-            ),
-            Positioned(
-              top: height * .22,
-              left: height * .20,
-              child: _Bubble(size: height * .075),
-            ),
-            Positioned(
-              bottom: height * .17,
-              right: height * .14,
-              child: _Bubble(size: height * .12),
-            ),
-            if (message case final speech?)
-              Center(
-                child: Flex(
-                  direction: height < 200 ? Axis.horizontal : Axis.vertical,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SharkMascot(
-                      size: height < 200 ? height * .75 : height * .69,
-                      mood: SharkMood.greet,
-                    ),
-                    const SizedBox(width: 6, height: 6),
-                    Flexible(
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 10),
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 9,
+              CustomPaint(painter: _OceanWaves(_tide.value)),
+              Positioned(
+                top: -widget.height * .24,
+                right: -widget.height * .10,
+                child: Transform.translate(
+                  offset: Offset(0, -_tide.value * 6),
+                  child: _Bubble(size: widget.height * .70),
+                ),
+              ),
+              Positioned(
+                bottom: -widget.height * .35,
+                left: -widget.height * .10,
+                child: _Bubble(size: widget.height * .76),
+              ),
+              Positioned(
+                top: widget.height * .22,
+                left: widget.height * .20,
+                child: Transform.translate(
+                  offset: Offset(0, -_tide.value * 10),
+                  child: _Bubble(size: widget.height * .075),
+                ),
+              ),
+              Positioned(
+                bottom: widget.height * .17,
+                right: widget.height * .14,
+                child: Transform.translate(
+                  offset: Offset(0, -_tide.value * 15),
+                  child: _Bubble(size: widget.height * .12),
+                ),
+              ),
+              if (widget.message case final speech?)
+                Center(
+                  child: Flex(
+                    direction: widget.height < 200
+                        ? Axis.horizontal
+                        : Axis.vertical,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SharkMascot(
+                        size: widget.height < 200
+                            ? widget.height * .75
+                            : widget.height * .69,
+                        mood: SharkMood.greet,
+                      ),
+                      const SizedBox(width: 6, height: 6),
+                      Flexible(
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            child: Text(
-                              speech,
-                              style: const TextStyle(
-                                color: _ink,
-                                fontWeight: FontWeight.w800,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 9,
+                              ),
+                              child: Text(
+                                speech,
+                                style: const TextStyle(
+                                  color: _ink,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                )
+              else
+                Center(
+                  child: SharkMascot(
+                    size: widget.height * .85,
+                    mood: SharkMood.greet,
+                  ),
                 ),
-              )
-            else
-              Center(
-                child: SharkMascot(size: height * .85, mood: SharkMood.greet),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+class _OceanWaves extends CustomPainter {
+  const _OceanWaves(this.phase);
+  final double phase;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var layer = 0; layer < 3; layer++) {
+      final base = size.height * (.62 + layer * .10);
+      final path = Path()..moveTo(0, base);
+      for (var x = 0.0; x <= size.width + 8; x += 8) {
+        final wave =
+            math.sin(x / (36 + layer * 13) + phase * math.pi * 2 + layer) *
+            (8 + layer * 3);
+        path.lineTo(x, base + wave);
+      }
+      path
+        ..lineTo(size.width, size.height)
+        ..lineTo(0, size.height)
+        ..close();
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = [
+            const Color(0x236BDBEE),
+            const Color(0x3297EEFB),
+            const Color(0x4AB9F3F7),
+          ][layer],
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _OceanWaves oldDelegate) =>
+      oldDelegate.phase != phase;
 }
 
 class _Bubble extends StatelessWidget {
