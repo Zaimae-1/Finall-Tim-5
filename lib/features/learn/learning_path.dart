@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -90,76 +91,15 @@ class _LearningPathState extends State<LearningPath> {
           colors: [Color(0xFFAAE9EF), Color(0xFF54B9D7), Color(0xFF0978AC)],
         ),
       ),
-      child: Column(
+      child: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Jalur belajar',
-                        style: TextStyle(
-                          color: Color(0xFF144A69),
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const Text(
-                        'Peta petualangan',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 23,
-                        ),
-                      ),
-                      Text(
-                        '${widget.completed.length} / ${widget.lessons.length} level selesai',
-                        style: const TextStyle(
-                          color: Color(0xFFECFAFF),
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Ke level aktif $activeLevel',
-                  onPressed: () => _goToLevel(activeLevel),
-                  icon: const Icon(
-                    Icons.my_location_rounded,
-                    color: Colors.white,
-                  ),
-                ),
-                PopupMenuButton<int>(
-                  tooltip: 'Pilih pulau atau level',
-                  icon: const Icon(Icons.sailing_rounded, color: Colors.white),
-                  onSelected: _goToLevel,
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 1,
-                      child: Text('Level 1 · Mulai'),
-                    ),
-                    for (
-                      var level = 5;
-                      level <= widget.lessons.length;
-                      level += 5
-                    )
-                      PopupMenuItem(value: level, child: Text('Pulau $level')),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Expanded(
+          Positioned.fill(
             child: ListView.builder(
               controller: _scroll,
               reverse: true,
               padding: EdgeInsets.only(
                 bottom: MediaQuery.paddingOf(context).bottom + 96,
-                top: 24,
+                top: 64,
               ),
               itemExtent: _stopExtent,
               itemCount: widget.lessons.length,
@@ -190,6 +130,52 @@ class _LearningPathState extends State<LearningPath> {
                   ),
                 );
               },
+            ),
+          ),
+          Positioned(
+            top: 10,
+            right: 12,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: const Color(0x99103552),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: 'Ke level aktif $activeLevel',
+                    onPressed: () => _goToLevel(activeLevel),
+                    icon: const Icon(
+                      Icons.my_location_rounded,
+                      color: Colors.white,
+                    ),
+                  ),
+                  PopupMenuButton<int>(
+                    tooltip: 'Pilih pulau atau level',
+                    icon: const Icon(
+                      Icons.sailing_rounded,
+                      color: Colors.white,
+                    ),
+                    onSelected: _goToLevel,
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 1,
+                        child: Text('Level 1 · Mulai'),
+                      ),
+                      for (
+                        var level = 5;
+                        level <= widget.lessons.length;
+                        level += 5
+                      )
+                        PopupMenuItem(
+                          value: level,
+                          child: Text('Pulau $level'),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -243,9 +229,10 @@ class _MapStop extends StatelessWidget {
                       Semantics(
                         label: island
                             ? 'Pulau harta karun level $level'
-                            : 'Kapal level $level',
+                            : '${shipName(shipTier(level))} level $level',
                         child: _AnimatedMapIcon(
                           island: island,
+                          tier: shipTier(level),
                           animate: animate,
                           muted: !unlocked,
                           opened: done,
@@ -340,45 +327,11 @@ class _MapStop extends StatelessWidget {
                 right: level.isOdd ? 8 : null,
                 child: MotionReveal(
                   key: ValueKey('guide-$level'),
-                  child: Column(
-                    children: [
-                      Container(
-                        constraints: const BoxConstraints(maxWidth: 120),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x300D5477),
-                              blurRadius: 8,
-                              offset: Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          allDone
-                              ? 'Hebat! Semua level selesai.'
-                              : island
-                              ? 'Buka peti Treasure ini!'
-                              : 'Ayo selesaikan level $level!',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: _ink,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ),
-                      SharkMascot(
-                        size: 68,
-                        animate: animate,
-                        mood: allDone ? SharkMood.celebrate : SharkMood.greet,
-                      ),
-                    ],
+                  child: _SharkGuide(
+                    level: level,
+                    island: island,
+                    allDone: allDone,
+                    animate: animate,
                   ),
                 ),
               ),
@@ -389,14 +342,136 @@ class _MapStop extends StatelessWidget {
   }
 }
 
+const sharkTips = [
+  'Latihan 5 menit setiap hari lebih ampuh daripada belajar sekali seminggu.',
+  'Salah itu wajar. Dari jawaban yang salah, otakmu belajar paling banyak!',
+  'Ucapkan kalimat bahasa Inggris keras-keras, walau cuma sendirian.',
+  'Hafalkan kata baru dalam kalimat, bukan satu per satu.',
+  'Jaga streak apimu. Satu latihan kecil sudah cukup untuk hari ini!',
+  'Dengarkan lagu berbahasa Inggris, lalu tebak arti liriknya.',
+  'Beri label bahasa Inggris pada benda di kamarmu: door, window, bag.',
+  'Ulangi kata yang sulit besok pagi. Pengulangan membuat ingatan awet.',
+  'Jangan takut salah grammar. Yang penting berani mencoba berbicara.',
+  'Tonton video favoritmu dengan subtitle bahasa Inggris.',
+  'Tulis satu kalimat bahasa Inggris tentang harimu sebelum tidur.',
+  'Level Treasure memberi 250 XP. Semangat menuju pulau berikutnya!',
+  'Pakai XP Booster sebelum latihan agar bonus XP-mu maksimal.',
+  'Belajar sambil bermain: tantang temanmu menyusun kalimat bareng.',
+  'Kosakata baru paling cepat menempel kalau kamu langsung memakainya.',
+  'Istirahat sejenak itu penting. Otak menyimpan pelajaran saat kamu tenang.',
+  'Bayangkan dirimu ngobrol dengan turis. Kamu pasti bisa!',
+  'Satu level hari ini, satu langkah lebih dekat ke fasih berbahasa Inggris.',
+];
+
+class _SharkGuide extends StatefulWidget {
+  const _SharkGuide({
+    required this.level,
+    required this.island,
+    required this.allDone,
+    required this.animate,
+  });
+
+  final int level;
+  final bool island;
+  final bool allDone;
+  final bool animate;
+
+  @override
+  State<_SharkGuide> createState() => _SharkGuideState();
+}
+
+class _SharkGuideState extends State<_SharkGuide> {
+  Timer? _timer;
+  int _step = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) setState(() => _step++);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  String get _message {
+    if (widget.allDone) return 'Hebat! Semua level selesai.';
+    // Even steps nudge toward the active level; odd steps rotate the tips.
+    if (_step.isEven) {
+      return widget.island
+          ? 'Buka peti Treasure ini!'
+          : 'Ayo selesaikan level ${widget.level}!';
+    }
+    final offset = widget.level % sharkTips.length;
+    return sharkTips[(offset + _step ~/ 2) % sharkTips.length];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reduce = MediaQuery.disableAnimationsOf(context) || !widget.animate;
+    final message = _message;
+    return Column(
+      children: [
+        AnimatedSwitcher(
+          duration: reduce ? Duration.zero : const Duration(milliseconds: 350),
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween(begin: .9, end: 1.0).animate(animation),
+              child: child,
+            ),
+          ),
+          child: Container(
+            key: ValueKey(message),
+            constraints: const BoxConstraints(maxWidth: 138),
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x300D5477),
+                  blurRadius: 8,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: _ink,
+                fontWeight: FontWeight.w800,
+                fontSize: 11,
+                height: 1.25,
+              ),
+            ),
+          ),
+        ),
+        SharkMascot(
+          size: 68,
+          animate: widget.animate,
+          mood: widget.allDone ? SharkMood.celebrate : SharkMood.greet,
+        ),
+      ],
+    );
+  }
+}
+
 class _AnimatedMapIcon extends StatefulWidget {
   const _AnimatedMapIcon({
     required this.island,
+    required this.tier,
     required this.animate,
     required this.muted,
     required this.opened,
   });
   final bool island;
+  final int tier;
   final bool animate;
   final bool muted;
   final bool opened;
@@ -473,9 +548,9 @@ class _AnimatedMapIconState extends State<_AnimatedMapIcon>
                   offset: Offset(0, phase * 3),
                   child: Transform.rotate(
                     angle: phase * .045,
-                    child: const CustomPaint(
-                      size: Size(94, 85),
-                      painter: _BoatPainter(),
+                    child: CustomPaint(
+                      size: const Size(94, 85),
+                      painter: _BoatPainter(widget.tier),
                     ),
                   ),
                 ),
@@ -485,66 +560,185 @@ class _AnimatedMapIconState extends State<_AnimatedMapIcon>
   );
 }
 
+/// Ships grow with every Treasure checkpoint: levels 1-4 are tier 0,
+/// 6-9 tier 1, 11-14 tier 2, and so on up to tier 19 at levels 96-99.
+int shipTier(int level) => ((level - 1) ~/ 5).clamp(0, 19);
+
+const _shipNames = [
+  'Perahu Kayu',
+  'Perahu Kecil',
+  'Kapal Kecil (Sloop)',
+  'Kutter Layar',
+  'Skuner',
+  'Brigantine',
+  'Karavel',
+  'Kapal Dagang',
+  'Galai Emas',
+  'Barque',
+  'Kapal Layar Agung',
+  'Fregat',
+  'Kapal Penjelajah',
+  'Galleon',
+  'Kapal Kapten',
+  'Kapal Perang',
+  'Kapal Emas',
+  'Kapal Kerajaan',
+  'Kapal Legenda',
+  'Kapal Raja Laut',
+];
+
+String shipName(int tier) => _shipNames[tier.clamp(0, _shipNames.length - 1)];
+
 class _BoatPainter extends CustomPainter {
-  const _BoatPainter();
+  const _BoatPainter(this.tier);
+  final int tier;
+
+  static const _hulls = [
+    Color(0xFF7A5232),
+    Color(0xFF8C5C34),
+    Color(0xFF133D5E),
+    Color(0xFF1B4F7A),
+    Color(0xFF0F5C58),
+    Color(0xFF8E2433),
+    Color(0xFF5B2A86),
+    Color(0xFF16413B),
+    Color(0xFF1E2A4F),
+    Color(0xFF7D1D2E),
+  ];
+
   @override
   void paint(Canvas canvas, Size size) {
     final p = Paint()..isAntiAlias = true;
+    const cx = 47.0;
+    final hw = (54 + tier * 1.8) / 2;
+    const deck = 53.0;
+    final hull = _hulls[(tier ~/ 2).clamp(0, _hulls.length - 1)];
+    const gold = Color(0xFFFFD36A);
+
+    if (tier >= 14) {
+      p.shader = RadialGradient(
+        colors: [gold.withValues(alpha: .38), gold.withValues(alpha: 0)],
+      ).createShader(Rect.fromCircle(center: const Offset(cx, 42), radius: 46));
+      canvas.drawCircle(const Offset(cx, 42), 46, p);
+      p.shader = null;
+    }
+
     p.color = const Color(0xBFFFFFFF);
-    canvas.drawArc(const Rect.fromLTWH(5, 65, 84, 14), 0, math.pi, false, p);
-    p.color = const Color(0xFF133D5E);
+    canvas.drawArc(
+      Rect.fromLTWH(cx - hw - 6, 65, hw * 2 + 12, 14),
+      0,
+      math.pi,
+      false,
+      p,
+    );
+
+    final masts = tier == 0 ? 0 : math.min(1 + (tier - 1) ~/ 5, 4);
+    final mastHeight = math.min(30.0 + tier * .75, 46.0);
+    final sailWidth = math.min(26.0, (hw * 1.5) / math.max(masts, 1) - 2);
+    for (var i = 0; i < masts; i++) {
+      final x = masts == 1 ? cx : cx - hw * .55 + i * (hw * 1.1) / (masts - 1);
+      final top = deck - mastHeight + (i.isOdd ? 5 : 0);
+      p.color = const Color(0xFF654C36);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(x - 1.5, top, 3, deck - top + 2),
+          const Radius.circular(2),
+        ),
+        p,
+      );
+      p.color = tier >= 8 && i.isOdd ? gold : Colors.white;
+      canvas.drawPath(
+        Path()
+          ..moveTo(x - 2, top + 4)
+          ..lineTo(x - sailWidth, deck - 7)
+          ..lineTo(x - 2, deck - 7)
+          ..close(),
+        p,
+      );
+      p.color = tier >= 3 ? gold : const Color(0xFFFFE8A6);
+      canvas.drawPath(
+        Path()
+          ..moveTo(x + 2, top + 3)
+          ..lineTo(x + sailWidth * .85, deck - 7)
+          ..lineTo(x + 2, deck - 7)
+          ..close(),
+        p,
+      );
+      if (tier >= 2) {
+        p.color = tier >= 10
+            ? const Color(0xFFFF5D73)
+            : const Color(0xFFE94B5E);
+        canvas.drawPath(
+          Path()
+            ..moveTo(x + 1.5, top)
+            ..lineTo(x + 11, top + 3)
+            ..lineTo(x + 1.5, top + 6)
+            ..close(),
+          p,
+        );
+      }
+    }
+
+    if (tier == 0) {
+      p.color = const Color(0xFF4B3524);
+      p.style = PaintingStyle.stroke;
+      p.strokeWidth = 2.5;
+      p.strokeCap = StrokeCap.round;
+      canvas.drawLine(const Offset(36, 44), const Offset(60, 62), p);
+      p.style = PaintingStyle.fill;
+    }
+
+    p.color = hull;
     canvas.drawPath(
       Path()
-        ..moveTo(12, 52)
-        ..lineTo(84, 52)
-        ..lineTo(73, 68)
-        ..quadraticBezierTo(48, 77, 22, 68)
+        ..moveTo(cx - hw, deck)
+        ..lineTo(cx + hw, deck)
+        ..lineTo(cx + hw - 11, 69)
+        ..quadraticBezierTo(cx, 78, cx - hw + 11, 69)
         ..close(),
       p,
     );
-    p.color = const Color(0xFF0E76AE);
+    p.color = tier >= 8 ? gold : const Color(0xFF0E76AE);
     canvas.drawPath(
       Path()
-        ..moveTo(18, 52)
-        ..lineTo(78, 52)
-        ..lineTo(72, 59)
-        ..lineTo(22, 59)
+        ..moveTo(cx - hw + 5, deck)
+        ..lineTo(cx + hw - 5, deck)
+        ..lineTo(cx + hw - 8, deck + 5)
+        ..lineTo(cx - hw + 8, deck + 5)
         ..close(),
       p,
     );
-    p.color = const Color(0xFF654C36);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(45, 8, 3, 46),
-        const Radius.circular(2),
-      ),
-      p,
-    );
-    p.color = Colors.white;
-    canvas.drawPath(
-      Path()
-        ..moveTo(43, 12)
-        ..lineTo(14, 45)
-        ..lineTo(43, 45)
-        ..close(),
-      p,
-    );
-    p.color = const Color(0xFFFFD36A);
-    canvas.drawPath(
-      Path()
-        ..moveTo(50, 11)
-        ..lineTo(74, 45)
-        ..lineTo(50, 45)
-        ..close(),
-      p,
-    );
+
+    if (tier >= 4) {
+      p.color = const Color(0xFF3A2A1E);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(cx + hw * .3, deck - 9, hw * .55, 10),
+          const Radius.circular(2),
+        ),
+        p,
+      );
+      p.color = const Color(0xFFB3EFFF);
+      canvas.drawCircle(Offset(cx + hw * .58, deck - 4), 2, p);
+    }
+    if (tier >= 6) {
+      p.color = gold;
+      for (var i = 0; i < math.min(2 + (tier - 6) ~/ 4, 4); i++) {
+        canvas.drawCircle(Offset(cx - hw * .5 + i * hw * .38, 62), 2, p);
+      }
+    }
+    if (tier >= 17) {
+      p.color = gold;
+      canvas.drawCircle(const Offset(cx, 4.5), 3.5, p);
+    }
     p.color = const Color(0xFFB3EFFF);
-    canvas.drawCircle(const Offset(14, 72), 2.5, p);
-    canvas.drawCircle(const Offset(80, 75), 2, p);
+    canvas.drawCircle(Offset(cx - hw - 4, 72), 2.5, p);
+    canvas.drawCircle(Offset(cx + hw + 2, 75), 2, p);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _BoatPainter oldDelegate) =>
+      oldDelegate.tier != tier;
 }
 
 class _IslandPainter extends CustomPainter {

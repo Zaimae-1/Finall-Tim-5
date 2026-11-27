@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -127,9 +129,64 @@ class _LessonPageState extends State<LessonPage> {
     if (mounted && leave == true) Navigator.of(context).pop();
   }
 
+  ThemeData _quizTheme(ThemeData base) {
+    const gold = Color(0xFFFFD36A);
+    const ink = Color(0xFF103552);
+    return base.copyWith(
+      textTheme: base.textTheme.apply(
+        bodyColor: Colors.white,
+        displayColor: Colors.white,
+      ),
+      colorScheme: base.colorScheme.copyWith(primary: gold),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: gold,
+        linearTrackColor: Color(0x44FFFFFF),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: const Color(0x33FFFFFF),
+        side: const BorderSide(color: Color(0x66FFFFFF)),
+        labelStyle: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: gold,
+          foregroundColor: ink,
+          disabledBackgroundColor: const Color(0x33FFFFFF),
+          disabledForegroundColor: const Color(0x99FFFFFF),
+          minimumSize: const Size.fromHeight(56),
+          elevation: 6,
+          shadowColor: const Color(0x66000000),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.white,
+          side: const BorderSide(color: Color(0xAAFFFFFF)),
+          minimumSize: const Size.fromHeight(52),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final theme = _quizTheme(Theme.of(context));
     final total = widget.lesson.exercises.length;
     final showSummary = _earnedReward != null || _hearts == 0;
     return PopScope(
@@ -137,106 +194,153 @@ class _LessonPageState extends State<LessonPage> {
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _exit();
       },
-      child: Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            tooltip: 'Tutup latihan',
-            onPressed: _saving ? null : _exit,
-            icon: const Icon(Icons.close_rounded),
-          ),
-          title: Text(widget.lesson.title),
-          actions: [
-            if (!showSummary)
-              Padding(
-                padding: const EdgeInsets.only(right: 18),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.favorite_rounded,
-                      color: Color(0xFFBA3454),
+      child: Theme(
+        data: theme,
+        child: Scaffold(
+          extendBodyBehindAppBar: true,
+          backgroundColor: const Color(0xFF075DAB),
+          appBar: AppBar(
+            leading: IconButton(
+              tooltip: 'Tutup latihan',
+              onPressed: _saving ? null : _exit,
+              icon: const Icon(Icons.close_rounded),
+            ),
+            title: Text(
+              widget.lesson.title,
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+            actions: [
+              if (!showSummary)
+                Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0x33FFFFFF),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0x55FFFFFF)),
                     ),
-                    const SizedBox(width: 6),
-                    MotionReveal(
-                      key: ValueKey(_hearts),
-                      duration: const Duration(milliseconds: 180),
-                      lift: 4,
-                      startScale: 1.26,
-                      child: Text(
-                        '$_hearts',
-                        style: theme.textTheme.titleMedium,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
                       ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-        body: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 570),
-              child: ListView(
-                key: ValueKey((_index, showSummary)),
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-                children: showSummary
-                    ? _summary(context, total)
-                    : [
-                        MotionProgress(
-                          value: (_index + (_correct == null ? 0 : 1)) / total,
-                          height: 9,
-                          label: 'Progres latihan',
-                        ),
-                        const SizedBox(height: 16),
-                        Text('Soal ${_index + 1} dari $total'),
-                        const SizedBox(height: 14),
-                        MotionReveal(
-                          child: Semantics(
-                            header: true,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.favorite_rounded,
+                            color: Color(0xFFFF6F8E),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 6),
+                          MotionReveal(
+                            key: ValueKey(_hearts),
+                            duration: const Duration(milliseconds: 180),
+                            lift: 4,
+                            startScale: 1.26,
                             child: Text(
-                              _exercise.prompt,
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
+                              '$_hearts',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w900,
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 24),
-                        ..._answers(),
-                        const SizedBox(height: 24),
-                        if (_correct case final answerCorrect?)
-                          _Feedback(
-                            correct: answerCorrect,
-                            solution: _exercise.solution,
-                            animateMascot: widget.animateMascot,
-                          ),
-                        if (_saveFailed)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 12),
-                            child: Text(
-                              'Progres gagal disimpan. Coba lagi.',
-                              style: TextStyle(color: theme.colorScheme.error),
-                            ),
-                          ),
-                        const SizedBox(height: 12),
-                        FilledButton(
-                          onPressed: _saving
-                              ? null
-                              : (_correct != null
-                                    ? _advance
-                                    : (_ready ? _check : null)),
-                          child: Text(
-                            _saving
-                                ? 'Menyimpan…'
-                                : _saveFailed
-                                ? 'Coba simpan lagi'
-                                : _correct != null
-                                ? 'Lanjut'
-                                : 'Periksa jawaban',
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          body: Stack(
+            children: [
+              const Positioned.fill(child: _QuizSea()),
+              SafeArea(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 570),
+                    child: ListView(
+                      key: ValueKey((_index, showSummary)),
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+                      children: showSummary
+                          ? _summary(context, theme, total)
+                          : [
+                              MotionProgress(
+                                value:
+                                    (_index + (_correct == null ? 0 : 1)) /
+                                    total,
+                                height: 11,
+                                label: 'Progres latihan',
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Soal ${_index + 1} dari $total',
+                                style: const TextStyle(
+                                  color: Color(0xFFD9F4FF),
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: .4,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              MotionReveal(
+                                key: ValueKey('prompt-$_index'),
+                                child: _GlassPanel(
+                                  child: Semantics(
+                                    header: true,
+                                    child: Text(
+                                      _exercise.prompt,
+                                      style: theme.textTheme.headlineSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w900,
+                                            height: 1.25,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 22),
+                              ..._answers(),
+                              const SizedBox(height: 24),
+                              if (_correct case final answerCorrect?)
+                                _Feedback(
+                                  correct: answerCorrect,
+                                  solution: _exercise.solution,
+                                  animateMascot: widget.animateMascot,
+                                ),
+                              if (_saveFailed)
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 12),
+                                  child: Text(
+                                    'Progres gagal disimpan. Coba lagi.',
+                                    style: TextStyle(
+                                      color: Color(0xFFFFB4C2),
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              const SizedBox(height: 12),
+                              FilledButton(
+                                onPressed: _saving
+                                    ? null
+                                    : (_correct != null
+                                          ? _advance
+                                          : (_ready ? _check : null)),
+                                child: Text(
+                                  _saving
+                                      ? 'Menyimpan…'
+                                      : _saveFailed
+                                      ? 'Coba simpan lagi'
+                                      : _correct != null
+                                      ? 'Lanjut'
+                                      : 'Periksa jawaban',
+                                ),
+                              ),
+                            ],
+                    ),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -264,13 +368,17 @@ class _LessonPageState extends State<LessonPage> {
             padding: const EdgeInsets.all(12),
             constraints: const BoxConstraints(minHeight: 72),
             decoration: BoxDecoration(
-              border: Border.all(color: const Color(0xFFA3BCCC)),
-              borderRadius: BorderRadius.circular(16),
+              color: const Color(0x22FFFFFF),
+              border: Border.all(color: const Color(0x88FFFFFF), width: 1.5),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: _ordered.isEmpty
                 ? const Align(
                     alignment: Alignment.centerLeft,
-                    child: Text('Susun kata di sini'),
+                    child: Text(
+                      'Susun kata di sini',
+                      style: TextStyle(color: Color(0xCCFFFFFF)),
+                    ),
                   )
                 : Wrap(
                     spacing: 8,
@@ -306,7 +414,13 @@ class _LessonPageState extends State<LessonPage> {
         ];
       case ExerciseKind.match:
         return [
-          const Text('Pilih satu kata di kiri, lalu artinya di kanan.'),
+          const Text(
+            'Pilih satu kata di kiri, lalu artinya di kanan.',
+            style: TextStyle(
+              color: Color(0xFFD9F4FF),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,7 +478,7 @@ class _LessonPageState extends State<LessonPage> {
     }
   }
 
-  List<Widget> _summary(BuildContext context, int total) {
+  List<Widget> _summary(BuildContext context, ThemeData theme, int total) {
     final reward = _earnedReward;
     return [
       const SizedBox(height: 14),
@@ -381,9 +495,9 @@ class _LessonPageState extends State<LessonPage> {
         child: Text(
           reward == null ? 'Hati habis' : 'Latihan selesai!',
           textAlign: TextAlign.center,
-          style: Theme.of(
-            context,
-          ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900),
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w900,
+          ),
         ),
       ),
       const SizedBox(height: 12),
@@ -397,7 +511,8 @@ class _LessonPageState extends State<LessonPage> {
           textAlign: TextAlign.center,
           style: TextStyle(
             fontWeight: FontWeight.w800,
-            color: Theme.of(context).colorScheme.primary,
+            color: theme.colorScheme.primary,
+            fontSize: 16,
           ),
         ),
       ),
@@ -412,7 +527,7 @@ class _LessonPageState extends State<LessonPage> {
               avatar: const Icon(
                 Icons.diamond_rounded,
                 size: 18,
-                color: Color(0xFF075DAB),
+                color: Color(0xFF9BE7FF),
               ),
               label: Text('+${reward.gems} Gems'),
             ),
@@ -420,7 +535,7 @@ class _LessonPageState extends State<LessonPage> {
               avatar: const Icon(
                 Icons.local_fire_department_rounded,
                 size: 18,
-                color: Color(0xFFA84E18),
+                color: Color(0xFFFFA45C),
               ),
               label: Text('+${reward.streak} hari streak'),
             ),
@@ -457,7 +572,7 @@ class _LessonPageState extends State<LessonPage> {
   }
 }
 
-class _AnswerTile extends StatelessWidget {
+class _AnswerTile extends StatefulWidget {
   const _AnswerTile({
     required this.label,
     required this.selected,
@@ -469,31 +584,174 @@ class _AnswerTile extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
+  State<_AnswerTile> createState() => _AnswerTileState();
+}
+
+class _AnswerTileState extends State<_AnswerTile> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final reduce = MediaQuery.disableAnimationsOf(context);
+    final duration = reduce ? Duration.zero : const Duration(milliseconds: 150);
+    final selected = widget.selected;
+    final enabled = widget.onTap != null;
     return Semantics(
       selected: selected,
-      child: OutlinedButton(
-        onPressed: onTap,
-        style: OutlinedButton.styleFrom(
-          animationDuration: MediaQuery.disableAnimationsOf(context)
-              ? Duration.zero
-              : const Duration(milliseconds: 145),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          minimumSize: const Size(44, 48),
-          backgroundColor: selected ? const Color(0xFFDDEFFE) : Colors.white,
-          disabledBackgroundColor: selected
-              ? const Color(0xFFDDEFFE)
-              : Colors.white,
-          disabledForegroundColor: colors.onSurface,
-          side: BorderSide(
-            color: selected ? colors.primary : const Color(0xFFA3BCCC),
+      button: true,
+      enabled: enabled,
+      child: AnimatedScale(
+        scale: _pressed && enabled ? .95 : 1,
+        duration: duration,
+        curve: Curves.easeOutBack,
+        child: AnimatedContainer(
+          duration: duration,
+          constraints: const BoxConstraints(minHeight: 54, minWidth: 44),
+          decoration: BoxDecoration(
+            gradient: selected
+                ? const LinearGradient(
+                    colors: [Color(0xFFFFF0B8), Color(0xFFFFD36A)],
+                  )
+                : const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0x40FFFFFF), Color(0x1AFFFFFF)],
+                  ),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: selected
+                  ? const Color(0xFFFFFFFF)
+                  : const Color(0x80FFFFFF),
+              width: selected ? 2 : 1.2,
+            ),
+            boxShadow: [
+              if (selected)
+                const BoxShadow(
+                  color: Color(0x88FFD36A),
+                  blurRadius: 16,
+                  spreadRadius: 1,
+                )
+              else
+                const BoxShadow(
+                  color: Color(0x22000000),
+                  blurRadius: 6,
+                  offset: Offset(0, 3),
+                ),
+            ],
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              splashColor: const Color(0x55FFFFFF),
+              onTap: widget.onTap,
+              onHighlightChanged: (value) => setState(() => _pressed = value),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                child: Center(
+                  widthFactor: 1,
+                  heightFactor: 1,
+                  child: Text(
+                    widget.label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: selected ? const Color(0xFF103552) : Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
-        child: Text(label, textAlign: TextAlign.center),
       ),
     );
   }
+}
+
+class _GlassPanel extends StatelessWidget {
+  const _GlassPanel({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+    borderRadius: BorderRadius.circular(26),
+    child: BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0x55FFFFFF), Color(0x1FFFFFFF)],
+          ),
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: const Color(0x99FFFFFF), width: 1.4),
+        ),
+        child: child,
+      ),
+    ),
+  );
+}
+
+class _QuizSea extends StatelessWidget {
+  const _QuizSea();
+
+  @override
+  Widget build(BuildContext context) => const DecoratedBox(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFF0B3C74), Color(0xFF0A78B5), Color(0xFF1FB7C9)],
+      ),
+    ),
+    child: CustomPaint(painter: _SeaPainter()),
+  );
+}
+
+class _SeaPainter extends CustomPainter {
+  const _SeaPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final wave = Paint()
+      ..color = const Color(0x18FFFFFF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    for (var row = 0; row < size.height / 90; row++) {
+      final y = row * 90.0 + 60;
+      final path = Path()..moveTo(-20, y);
+      for (var x = -20.0; x < size.width + 60; x += 90) {
+        path.quadraticBezierTo(x + 22, y - 14, x + 45, y);
+        path.quadraticBezierTo(x + 68, y + 14, x + 90, y);
+      }
+      canvas.drawPath(path, wave);
+    }
+    final bubble = Paint()
+      ..color = const Color(0x26FFFFFF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6;
+    for (final (fx, fy, r) in const [
+      (.10, .22, 9.0),
+      (.86, .16, 14.0),
+      (.18, .62, 6.0),
+      (.92, .52, 8.0),
+      (.70, .86, 12.0),
+      (.08, .90, 10.0),
+    ]) {
+      canvas.drawCircle(Offset(size.width * fx, size.height * fy), r, bubble);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _Feedback extends StatelessWidget {
@@ -517,7 +775,14 @@ class _Feedback extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(10, 6, 16, 6),
           decoration: BoxDecoration(
             color: correct ? const Color(0xFFE2F6ED) : const Color(0xFFFCE6EB),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 14,
+                offset: Offset(0, 5),
+              ),
+            ],
           ),
           child: Row(
             children: [

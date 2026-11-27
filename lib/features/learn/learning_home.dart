@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../shared/motion.dart';
 import '../../shared/shark_mascot.dart';
 import '../auth/local_profiles.dart';
+import 'boost_countdown.dart';
 import 'course.dart';
 import 'learning_progress.dart';
 import 'learning_path.dart';
@@ -559,7 +560,16 @@ class _LearningHomeState extends State<LearningHome> {
         const _Title(icon: Icons.bolt_rounded, title: 'XP Boosters'),
         const SizedBox(height: 8),
         const Text(
-          'Pakai satu booster pada penyelesaian level baru berikutnya.',
+          'Setiap booster aktif selama 5 menit. Selama itu semua XP yang kamu dapat bertambah sesuai persentasenya.',
+        ),
+        const SizedBox(height: 12),
+        BoostCountdown(
+          dark: false,
+          percent: progress.activeBoost,
+          untilMs: progress.boostUntil,
+          onExpired: () {
+            if (mounted) setState(() {});
+          },
         ),
         for (final percent in [5, 7, 10])
           Padding(
@@ -574,15 +584,22 @@ class _LearningHomeState extends State<LearningHome> {
                   style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
                 Text(
-                  'Stok ${progress.boosters[percent] ?? 0}${progress.activeBoost == percent ? ' · aktif' : ''}',
+                  'Stok ${progress.boosters[percent] ?? 0}${progress.boostPercentAt(DateTime.now().millisecondsSinceEpoch) == percent ? ' · aktif' : ''}',
                 ),
-                if ((progress.boosters[percent] ?? 0) > 0 &&
-                    progress.activeBoost != percent)
+                if ((progress.boosters[percent] ?? 0) > 0)
                   TextButton(
-                    onPressed: _saving
+                    onPressed:
+                        _saving ||
+                            progress.boostRemainingMs(
+                                  DateTime.now().millisecondsSinceEpoch,
+                                ) >
+                                0
                         ? null
-                        : () => _update(progress.equipBoost(percent)),
-                    child: const Text('Pakai'),
+                        : () => _update(
+                            progress.activateBoost(percent),
+                            message: 'Booster $percent% aktif selama 5 menit.',
+                          ),
+                    child: const Text('Aktifkan'),
                   ),
                 FilledButton.tonal(
                   onPressed:
@@ -689,7 +706,12 @@ class _LearningHomeState extends State<LearningHome> {
       onEdit: _saving ? null : () => _editProfile(progress, name),
     ),
     const SizedBox(height: 14),
-    RankShowcase(xp: progress.xp, onInfo: _showRankList),
+    RankShowcase(
+      xp: progress.xp,
+      onInfo: _showRankList,
+      boostPercent: progress.activeBoost,
+      boostUntilMs: progress.boostUntil,
+    ),
     const SizedBox(height: 20),
     OutlinedButton(
       onPressed: _saving ? null : widget.onSignOut,

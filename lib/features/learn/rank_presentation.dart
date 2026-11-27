@@ -2,13 +2,22 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'boost_countdown.dart';
 import 'rank.dart';
 
 class RankShowcase extends StatelessWidget {
-  const RankShowcase({super.key, required this.xp, required this.onInfo});
+  const RankShowcase({
+    super.key,
+    required this.xp,
+    required this.onInfo,
+    this.boostPercent = 0,
+    this.boostUntilMs,
+  });
 
   final int xp;
   final VoidCallback onInfo;
+  final int boostPercent;
+  final int? boostUntilMs;
 
   @override
   Widget build(BuildContext context) {
@@ -210,6 +219,8 @@ class RankShowcase extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  BoostCountdown(percent: boostPercent, untilMs: boostUntilMs),
                 ],
               ),
             ),

@@ -46,6 +46,7 @@ class LearningProgress {
     this.skinId = -1,
     this.boosters = const {},
     this.activeBoost = 0,
+    this.boostUntil,
   });
 
   factory LearningProgress.fromJson(Map<String, dynamic> data) {
@@ -71,6 +72,7 @@ class LearningProgress {
         (key, value) => MapEntry(int.parse(key.toString()), value as int),
       ),
       activeBoost: data['activeBoost'] as int? ?? 0,
+      boostUntil: data['boostUntil'] as int?,
     );
   }
 
@@ -94,6 +96,11 @@ class LearningProgress {
   final Map<int, int> boosters;
   final int activeBoost;
 
+  /// Epoch milliseconds when the running XP booster expires.
+  final int? boostUntil;
+
+  static const boostDuration = Duration(minutes: 5);
+
   Map<String, dynamic> toJson() => {
     'completed': completed.toList(),
     'xp': xp,
@@ -114,6 +121,7 @@ class LearningProgress {
     'skinId': skinId,
     'boosters': boosters.map((key, value) => MapEntry('$key', value)),
     'activeBoost': activeBoost,
+    'boostUntil': boostUntil,
   };
 
   int lessonsOn(int day) => lastDay == day ? lessonsToday : 0;
@@ -158,13 +166,24 @@ class LearningProgress {
     return gap <= 1 || (gap == 2 && freezes > 0) ? streak : 0;
   }
 
-  int rewardXp(String lessonId, bool perfect, {int? level}) {
+  int boostRemainingMs(int nowMs) {
+    final until = boostUntil;
+    if (until == null || activeBoost == 0) return 0;
+    return until > nowMs ? until - nowMs : 0;
+  }
+
+  int boostPercentAt(int nowMs) =>
+      boostRemainingMs(nowMs) > 0 ? activeBoost : 0;
+
+  int rewardXp(String lessonId, bool perfect, {int? level, int? nowMs}) {
     if (completed.contains(lessonId)) return 0;
     final actualLevel = _levelOf(lessonId, level);
     final base = isTreasureLevel(actualLevel) ? 250 : 25;
-    final boost = boosters[activeBoost] ?? 0;
-    return base + (boost > 0 ? (base * activeBoost / 100).round() : 0);
+    final percent = boostPercentAt(nowMs ?? _now());
+    return base + (percent > 0 ? (base * percent / 100).round() : 0);
   }
+
+  static int _now() => DateTime.now().millisecondsSinceEpoch;
 
   int _levelOf(String lessonId, int? fallback) {
     final knownIndex = lessons.indexWhere((lesson) => lesson.id == lessonId);
@@ -210,25 +229,32 @@ class LearningProgress {
     return copyWith(
       gems: gems - price,
       boosters: {...boosters, percent: (boosters[percent] ?? 0) + 1},
-      activeBoost: activeBoost == 0 ? percent : activeBoost,
     );
   }
 
-  LearningProgress equipBoost(int percent) =>
-      (boosters[percent] ?? 0) > 0 ? copyWith(activeBoost: percent) : this;
+  /// Starts a 5-minute booster from stock. Only one can run at a time.
+  LearningProgress activateBoost(int percent, {int? nowMs}) {
+    final now = nowMs ?? _now();
+    if ((boosters[percent] ?? 0) < 1 || boostRemainingMs(now) > 0) return this;
+    return copyWith(
+      boosters: {...boosters, percent: boosters[percent]! - 1},
+      activeBoost: percent,
+      boostUntil: now + boostDuration.inMilliseconds,
+    );
+  }
 
   LearningProgress finish(
     String lessonId,
     bool perfect,
     int day, {
     int? level,
+    int? nowMs,
   }) {
     final first = !completed.contains(lessonId);
     final usedFreeze = lastDay == day - 2 && freezes > 0;
-    final consumedBoost = first && (boosters[activeBoost] ?? 0) > 0;
     return copyWith(
       completed: {...completed, lessonId},
-      xp: xp + rewardXp(lessonId, perfect, level: level),
+      xp: xp + rewardXp(lessonId, perfect, level: level, nowMs: nowMs),
       gems:
           gems +
           (first ? (isTreasureLevel(_levelOf(lessonId, level)) ? 15 : 5) : 0),
@@ -236,10 +262,6 @@ class LearningProgress {
       lastDay: day,
       lessonsToday: lessonsOn(day) + 1,
       freezes: freezes - (usedFreeze ? 1 : 0),
-      boosters: consumedBoost
-          ? {...boosters, activeBoost: boosters[activeBoost]! - 1}
-          : boosters,
-      activeBoost: consumedBoost ? 0 : activeBoost,
     );
   }
 
@@ -263,6 +285,7 @@ class LearningProgress {
     int? skinId,
     Map<int, int>? boosters,
     int? activeBoost,
+    int? boostUntil,
   }) {
     return LearningProgress(
       completed: completed ?? this.completed,
@@ -284,6 +307,7 @@ class LearningProgress {
       skinId: skinId ?? this.skinId,
       boosters: boosters ?? this.boosters,
       activeBoost: activeBoost ?? this.activeBoost,
+      boostUntil: boostUntil ?? this.boostUntil,
     );
   }
 }

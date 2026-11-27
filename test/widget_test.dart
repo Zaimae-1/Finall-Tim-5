@@ -129,7 +129,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('LingoShark'), findsOneWidget);
     expect(find.bySemanticsLabel('0 hari streak'), findsOneWidget);
-    expect(find.text('Jalur belajar'), findsOneWidget);
+    expect(find.text('Jalur belajar'), findsNothing);
     expect(find.byType(LearningPath), findsOneWidget);
     expect(find.text('Quest harian'), findsNothing);
     expect(find.text('Petualangan Bahasa Inggris'), findsNothing);
@@ -565,15 +565,16 @@ void main() {
       expect(progress.gems, 40);
       expect(progress.avatarId, 0);
       expect(progress.skinId, 2);
-      expect(progress.activeBoost, 10);
+      expect(progress.activeBoost, 0);
       expect(progress.boosters[10], 1);
-      expect(progress.rewardXp(lessons[0].id, true), 28);
-      progress = progress.finish(lessons[0].id, true, 20);
+      expect(progress.rewardXp(lessons[0].id, true), 25);
+      progress = progress.activateBoost(10, nowMs: 1000);
+      expect(progress.boosters[10], 0);
+      expect(progress.rewardXp(lessons[0].id, true, nowMs: 2000), 28);
+      progress = progress.finish(lessons[0].id, true, 20, nowMs: 2000);
       expect(progress.xp, 28);
       expect(progress.gems, 45);
       expect(progress.streak, 1);
-      expect(progress.activeBoost, 0);
-      expect(progress.boosters[10], 0);
       progress = progress.finish(lessons[0].id, true, 20);
       expect(progress.xp, 28);
       expect(progress.gems, 45);
@@ -596,23 +597,50 @@ void main() {
     },
   );
 
-  test('All three boosters apply once to regular and Treasure XP', () {
+  test('Boosters last five minutes, then expire on their own', () {
     for (final percent in [5, 7, 10]) {
       final bought = const LearningProgress(gems: 100).buyBoost(percent);
       expect(bought.gems, 100 - LearningProgress.boostPrice(percent));
+      expect(bought.boostPercentAt(0), 0);
+      final active = bought.activateBoost(percent, nowMs: 0);
+      const fiveMinutes = 5 * 60 * 1000;
+      expect(active.boosters[percent], 0);
+      expect(active.boostRemainingMs(1000), fiveMinutes - 1000);
+      expect(active.boostPercentAt(fiveMinutes - 1), percent);
+      expect(active.boostPercentAt(fiveMinutes), 0);
       expect(
-        bought.rewardXp(lessons[0].id, true),
+        active.rewardXp(lessons[0].id, true, nowMs: 1000),
         25 + (25 * percent / 100).round(),
       );
       expect(
-        bought.rewardXp(lessons[4].id, true),
+        active.rewardXp(lessons[4].id, true, nowMs: 1000),
         250 + (250 * percent / 100).round(),
       );
-      final completed = bought.finish(lessons[4].id, true, 20);
-      expect(completed.activeBoost, 0);
+      expect(active.rewardXp(lessons[0].id, true, nowMs: fiveMinutes), 25);
+      final completed = active.finish(lessons[4].id, true, 20, nowMs: 1000);
+      expect(completed.gems, active.gems + 15);
       expect(completed.boosters[percent], 0);
-      expect(completed.gems, bought.gems + 15);
     }
+  });
+
+  test('Only one booster runs at a time and needs stock', () {
+    final base = const LearningProgress(gems: 100);
+    expect(base.activateBoost(5, nowMs: 0), same(base));
+    final stocked = base.buyBoost(5).buyBoost(7);
+    final running = stocked.activateBoost(5, nowMs: 0);
+    expect(running.activateBoost(7, nowMs: 1000), same(running));
+    final later = running.activateBoost(7, nowMs: 5 * 60 * 1000);
+    expect(later.activeBoost, 7);
+    expect(later.boosters[7], 0);
+  });
+
+  test('Ships get bigger every Treasure checkpoint', () {
+    expect([1, 4].map(shipTier), [0, 0]);
+    expect([6, 9].map(shipTier), [1, 1]);
+    expect([11, 14].map(shipTier), [2, 2]);
+    expect(shipTier(99), 19);
+    expect(shipTier(100), 19);
+    expect(sharkTips.length, greaterThanOrEqualTo(15));
   });
 
   test('Rank boundaries and progress follow total XP', () {
@@ -848,7 +876,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Peta petualangan'), findsOneWidget);
+    expect(find.text('Peta petualangan'), findsNothing);
     expect(find.text('Sapa seseorang'), findsOneWidget);
     final mapList = find.descendant(
       of: find.byType(LearningPath),
