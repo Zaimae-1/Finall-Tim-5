@@ -13,6 +13,7 @@ import 'learning_tab_bar.dart';
 import 'lesson_page.dart';
 import 'profile_art.dart';
 import 'rank.dart';
+import 'rank_presentation.dart';
 
 const _navy = Color(0xFF103552);
 const _blue = Color(0xFF075DAB);
@@ -110,6 +111,7 @@ class _LearningHomeState extends State<LearningHome> {
   Future<void> _openLesson(Lesson lesson, LearningProgress progress) async {
     if (_lessonOpen || _saving) return;
     _lessonOpen = true;
+    ({RankTier from, RankTier to})? promotion;
     try {
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
@@ -130,6 +132,12 @@ class _LearningHomeState extends State<LearningHome> {
                   level: level,
                 );
                 await _save(next);
+                final previousRank = rankForXp(current.xp);
+                final newRank = rankForXp(next.xp);
+                if (next.xp > current.xp &&
+                    newRank.index > previousRank.index) {
+                  promotion = (from: previousRank, to: newRank);
+                }
                 return (
                   xp: next.xp - current.xp,
                   gems: next.gems - current.gems,
@@ -144,6 +152,17 @@ class _LearningHomeState extends State<LearningHome> {
           !progress.completed.contains(lesson.id) &&
           _progress?.completed.contains(lesson.id) == true) {
         setState(() => _recentlyCompleted = lesson.id);
+      }
+      if (mounted && promotion != null) {
+        final promoted = promotion!;
+        await showDialog<void>(
+          context: context,
+          builder: (context) => RankUpDialog(
+            from: promoted.from,
+            to: promoted.to,
+            animate: (_progress ?? progress).motion,
+          ),
+        );
       }
     } finally {
       _lessonOpen = false;
@@ -332,7 +351,7 @@ class _LearningHomeState extends State<LearningHome> {
               _Destination.quests => _quests(progress, goal, day),
               _Destination.ranks => _ranks(progress, name),
               _Destination.shop => _shop(progress),
-              _Destination.profile => _profile(progress, name, goal, day),
+              _Destination.profile => _profile(progress, name, day),
             };
             return SharkSkinScope(
               skinId: progress.skinId,
@@ -696,12 +715,7 @@ class _LearningHomeState extends State<LearningHome> {
     ),
   ];
 
-  List<Widget> _profile(
-    LearningProgress progress,
-    String name,
-    int goal,
-    int day,
-  ) => [
+  List<Widget> _profile(LearningProgress progress, String name, int day) => [
     const _Heading(title: 'Profil', detail: 'Akun petualanganmu'),
     const SizedBox(height: 18),
     _ProfileHero(
@@ -713,91 +727,7 @@ class _LearningHomeState extends State<LearningHome> {
       onEdit: _saving ? null : () => _editProfile(progress, name),
     ),
     const SizedBox(height: 14),
-    _Panel(
-      children: [
-        Row(
-          children: [
-            const Expanded(
-              child: _Title(
-                icon: Icons.military_tech_rounded,
-                title: 'Rank kamu',
-              ),
-            ),
-            IconButton(
-              tooltip: 'Lihat semua rank',
-              onPressed: _showRankList,
-              icon: const Icon(Icons.info_outline_rounded, color: _blue),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            RankBadge(rank: rankForXp(progress.xp), size: 74),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    rankForXp(progress.xp).label,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 24,
-                      color: _navy,
-                    ),
-                  ),
-                  Text(
-                    '${progress.xp} XP terkumpul',
-                    style: const TextStyle(color: _muted),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        MotionProgress(value: rankProgress(progress.xp), label: 'Progres rank'),
-        const SizedBox(height: 8),
-        Text(
-          rankForXp(progress.xp).next == null
-              ? 'Rank tertinggi tercapai!'
-              : '${rankForXp(progress.xp).next!.minXp - progress.xp} XP lagi menuju ${rankForXp(progress.xp).next!.label}',
-        ),
-      ],
-    ),
-    const SizedBox(height: 14),
-    _Panel(
-      children: [
-        const _Title(icon: Icons.tune_rounded, title: 'Pengaturan belajar'),
-        const SizedBox(height: 14),
-        Text('Level awal: ${widget.profile.level}'),
-        const SizedBox(height: 14),
-        DropdownButtonFormField<int>(
-          initialValue: goal,
-          decoration: const InputDecoration(labelText: 'Target harian'),
-          items: [
-            for (final count in [1, 2, 3])
-              DropdownMenuItem(value: count, child: Text('$count lesson')),
-          ],
-          onChanged: _saving
-              ? null
-              : (count) {
-                  if (count != null && count != goal) {
-                    _update(progress.copyWith(dailyGoal: count));
-                  }
-                },
-        ),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Gerakan maskot'),
-          value: progress.motion,
-          onChanged: _saving
-              ? null
-              : (value) => _update(progress.copyWith(motion: value)),
-        ),
-      ],
-    ),
+    RankShowcase(xp: progress.xp, onInfo: _showRankList),
     const SizedBox(height: 20),
     OutlinedButton(
       onPressed: _saving ? null : widget.onSignOut,

@@ -6,9 +6,9 @@ Final project sekolah Tim 5 menggunakan Flutter. Tujuannya membuat ulang tampila
 
 **LingoShark** sudah punya layar sambutan, masuk, dan onboarding untuk profil demo. Halaman **Belajar** sekarang berupa peta laut penuh berisi **100 level** Bahasa Inggris, masing-masing lima soal, tanpa banner dan kartu quest di bawah peta. Lima level pertama ditulis khusus; level 6–100 memakai kuis kosakata dari 20 topik dengan variasi urutan soal. Peta dimulai dari level 1 di bawah dan naik menuju level 100, dengan pintasan ke level aktif dan setiap pulau. Kapal bergerak mengikuti ombak; setiap level kelipatan 5 adalah quest **Treasure** dengan pulau, pohon kelapa bergoyang, dan peti harta karun. Hiu animasi memberi petunjuk di level aktif dan maju setelah level selesai. Quest harian tetap tersedia di tab **Quest**.
 
-Header utama berbentuk kapsul melayang berisi streak, logo hiu, nama aplikasi, dan saldo Gems. Tab Quest menampilkan tiga misi harian dan empat peti pencapaian dengan hadiah yang dapat diklaim sekali. Profil memiliki kartu identitas bertema laut; Toko menampilkan lima skin hiu dalam kartu pratinjau yang lebih lapang.
+Header utama berbentuk kapsul melayang berisi streak, logo hiu, nama aplikasi, dan saldo Gems. Tab Quest menampilkan tiga misi harian dan empat peti pencapaian dengan hadiah yang dapat diklaim sekali. Profil memiliki kartu identitas bertema laut dan kartu rank futuristik; saat XP baru menaikkan tier, pop-up perayaan tampil setelah kembali ke peta. Toko menampilkan lima skin hiu dalam kartu pratinjau yang lebih lapang.
 
-Untuk demo, pilih **Mulai belajar**, isi level dan target harian, lalu daftar dengan data contoh seperti `nama@example.com`. Coba selesaikan satu lesson, keluar dari Profil, lalu masuk lagi dengan data yang sama. Profil dan progres disimpan di perangkat atau browser yang dipakai. Sesi berakhir saat aplikasi ditutup. Gerakan hiu bisa dimatikan dari Profil dan mengikuti preferensi pengurangan animasi perangkat.
+Untuk demo, pilih **Mulai belajar**, isi level dan target harian, lalu daftar dengan data contoh seperti `nama@example.com`. Coba selesaikan satu lesson, keluar dari Profil, lalu masuk lagi dengan data yang sama. Profil dan progres disimpan di perangkat atau browser yang dipakai. Sesi berakhir saat aplikasi ditutup. Gerakan hiu mengikuti preferensi pengurangan animasi perangkat.
 
 Android adalah target utama tugas karena aplikasi referensinya dari Play Store. Web disediakan untuk memudahkan preview di laptop. iOS hanya bisa dibangun menggunakan macOS dan Xcode.
 
@@ -25,7 +25,7 @@ Fokus saat ini: satu kursus **bahasa Inggris untuk pengguna berbahasa Indonesia*
 | Hasil lesson | Tampilkan akurasi, XP, Gems, dan perubahan streak; simpan progres dan kembali ke Home |
 | Quests | Tiga misi harian dan empat peti pencapaian; hadiah Gems masing-masing hanya dapat diklaim sekali |
 | Leaderboard | Peringkat demo dengan data contoh; posisi dan lencana rank setiap peserta mengikuti XP, diberi label demo |
-| Profil / pengaturan | Avatar aktif, nama, email, statistik, lencana rank, progres ke rank berikutnya, daftar semua rank, edit profil, dan pengaturan belajar |
+| Profil | Avatar aktif, nama, email, statistik, kartu rank dengan progres ke rank berikutnya, daftar semua rank, dan edit profil |
 | Shop | Saldo Gems, pelindung streak, booster XP 5%/7%/10%, lima art profil, dan lima kostum hiu; saldo tidak boleh negatif |
 
 Alur demo: **Welcome → onboarding → profil → Home → lesson → hasil → progres/XP/quest diperbarui → lesson berikutnya terbuka**.
@@ -40,6 +40,7 @@ Alur demo: **Welcome → onboarding → profil → Home → lesson → hasil →
 - Booster 5%, 7%, dan 10% masing-masing berharga 10, 15, dan 20 Gems. Booster yang dipakai menambah XP dasar pada penyelesaian level baru berikutnya (dibulatkan ke bilangan bulat terdekat), lalu stoknya berkurang satu. Latihan ulang tidak menghabiskan booster. Hanya satu booster aktif pada satu waktu.
 - Terdapat lima art profil eksklusif seharga 15 Gems dan lima kostum hiu seharga 25 Gems per item. Pembelian membuka item untuk akun demo tersebut, kemudian item dapat dipilih tanpa membayar lagi. Art yang belum dibeli tidak dapat dipasang; kostum yang dipasang tampil di peta dan layar quiz. Avatar dasar tersedia sebelum ada art yang dibeli.
 - Rank dihitung dari total XP: Bronze 0–29, Silver 30–59, Gold 60–99, Platinum 100–199, Diamond 200–299, Ascendant 300–399, Immortal 400–999, dan Radiant mulai 1000 XP. Batas yang beririsan masuk ke rank baru; 0 XP ditampilkan Bronze sebagai rank awal. Lencana dibuat khusus untuk LingoShark dengan referensi gaya geometris dari gambar tugas.
+- Saat hadiah kuis baru membuat rank naik, modal perayaan menunjukkan tier lama dan tier baru setelah pemain kembali ke peta. Latihan ulang tanpa tambahan XP tidak memicu modal.
 - Progres lama tetap tersimpan. XP dari lesson yang diselesaikan sebelum perubahan aturan hadiah tidak dihitung ulang; aturan baru berlaku pada penyelesaian level berikutnya.
 - Lesson dimulai dengan lima hati. Jawaban salah mengurangi satu hati. Jika hati habis, pemain bisa ulang dari awal atau kembali ke jalur belajar.
 - Gunakan tema biru LingoShark dan maskot hiu buatan proyek. Gunakan Duolingo sebagai referensi alur dan fitur, lalu sesuaikan susunan layar dan komponen dengan identitas LingoShark.

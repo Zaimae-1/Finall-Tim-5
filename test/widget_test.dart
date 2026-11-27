@@ -6,6 +6,7 @@ import 'package:duolingo_clone/features/learn/learning_home.dart';
 import 'package:duolingo_clone/features/learn/learning_progress.dart';
 import 'package:duolingo_clone/features/learn/learning_path.dart';
 import 'package:duolingo_clone/features/learn/rank.dart';
+import 'package:duolingo_clone/features/learn/rank_presentation.dart';
 import 'package:duolingo_clone/features/learn/profile_art.dart';
 import 'package:duolingo_clone/features/learn/course.dart';
 import 'package:duolingo_clone/features/learn/learning_tab_bar.dart';
@@ -218,6 +219,54 @@ void main() {
     expect(persisted.completed, {'greetings'});
     expect(persisted.gems, 20);
     expect(persisted.freezes, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Rank up celebration appears on the map after a quiz', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    _reduceMotion(tester);
+    await ProgressStore(
+      'promotion@example.com',
+    ).save(const LearningProgress(xp: 29));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: lingoSharkTheme(),
+        home: LearningHome(
+          profile: const LearnerProfile(
+            name: 'Nara',
+            email: 'promotion@example.com',
+          ),
+          onSignOut: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView).first, const Offset(0, -430));
+    await tester.pumpAndSettle();
+    await _tap(tester, 'Sapa seseorang');
+    for (final answers in [
+      ['Selamat pagi'],
+      ['How', 'are', 'you'],
+      ['Hello', 'Halo', 'Thanks', 'Terima kasih', 'Goodbye', 'Sampai jumpa'],
+      ['Nice to meet you'],
+      ['See', 'you', 'tomorrow'],
+    ]) {
+      for (final answer in answers) {
+        await _tap(tester, answer);
+      }
+      await _tap(tester, 'Periksa jawaban');
+      await _tap(tester, 'Lanjut');
+    }
+    await _tap(tester, 'Kembali ke belajar');
+    expect(find.byType(RankUpDialog), findsOneWidget);
+    expect(find.text('LEVEL UP!'), findsOneWidget);
+    expect(find.text('Bronze → Silver'), findsOneWidget);
+    await _tap(tester, 'Lanjut berpetualang');
+    expect(find.byType(RankUpDialog), findsNothing);
+    expect(find.text('Ayo selesaikan level 2!'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -621,6 +670,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Gold'), findsOneWidget);
+    expect(find.text('Pengaturan belajar'), findsNothing);
     expect(find.text('25 XP lagi menuju Platinum'), findsOneWidget);
     expect(
       tester.widget<RankBadge>(find.byType(RankBadge)).rank,
