@@ -132,8 +132,7 @@ git push -u origin feat/nama-fitur
 lib/main.dart          Entry point dan tema aplikasi
 lib/features/auth/     Layar akun dan penyimpanan profil demo
 lib/features/learn/    Jalur belajar, latihan, dan progres lokal
-lib/shared/            Widget animasi maskot
-assets/images/         Ilustrasi maskot hiu
+lib/shared/            Maskot hiu vektor (shark_art.dart) dan animasinya
 test/widget_test.dart  Tes form dan profil demo
 android/               Project runner Android
 ios/                   Project runner iOS

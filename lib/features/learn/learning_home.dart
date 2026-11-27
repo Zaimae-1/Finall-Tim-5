@@ -893,78 +893,103 @@ class _SkinChoice extends StatelessWidget {
   final VoidCallback? onPressed;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(10),
-    decoration: BoxDecoration(
-      color: active ? const Color(0xFFE4F5FF) : const Color(0xFFF5FAFD),
-      borderRadius: BorderRadius.circular(19),
-      border: Border.all(
-        color: active ? _blue : _outline,
-        width: active ? 2 : 1,
+  Widget build(BuildContext context) {
+    final label = active
+        ? 'Dipakai'
+        : owned
+        ? 'Pakai'
+        : 'Beli';
+    final button = FilledButton.tonal(
+      onPressed: active || (!owned && !canBuy) ? null : onPressed,
+      style: FilledButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
       ),
-    ),
-    child: Row(
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+      ),
+    );
+    final info = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 84,
-          height: 84,
+        Text(
+          name,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: _navy,
+            fontWeight: FontWeight.w900,
+            fontSize: 16,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          active
+              ? 'Sedang dipakai'
+              : owned
+              ? 'Sudah dimiliki'
+              : '25 Gems · terkunci',
+          style: const TextStyle(color: _muted, fontSize: 12),
+        ),
+      ],
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < 290;
+        final preview = Container(
+          width: 92,
+          height: 92,
           decoration: BoxDecoration(
-            color: const Color(0xFFCDECF8),
-            borderRadius: BorderRadius.circular(15),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFE3F6FF), Color(0xFFB9E4F5)],
+            ),
+            borderRadius: BorderRadius.circular(18),
           ),
           child: SharkSkinScope(
             skinId: skinId,
-            child: SharkMascot(size: 73, animate: false),
+            child: const SharkMascot(size: 92, animate: false),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: _navy,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 16,
+        );
+        return Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: active ? const Color(0xFFE4F5FF) : const Color(0xFFF5FAFD),
+            borderRadius: BorderRadius.circular(19),
+            border: Border.all(
+              color: active ? _blue : _outline,
+              width: active ? 2 : 1,
+            ),
+          ),
+          child: narrow
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        preview,
+                        const SizedBox(width: 12),
+                        Expanded(child: info),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    button,
+                  ],
+                )
+              : Row(
+                  children: [
+                    preview,
+                    const SizedBox(width: 12),
+                    Expanded(child: info),
+                    const SizedBox(width: 8),
+                    SizedBox(width: 76, child: button),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                active
-                    ? 'Sedang dipakai'
-                    : owned
-                    ? 'Sudah dimiliki'
-                    : '25 Gems · terkunci',
-                style: const TextStyle(color: _muted, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 5),
-        SizedBox(
-          width: 76,
-          child: FilledButton.tonal(
-            onPressed: active || (!owned && !canBuy) ? null : onPressed,
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-            ),
-            child: Text(
-              active
-                  ? 'Dipakai'
-                  : owned
-                  ? 'Pakai'
-                  : 'Beli',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
+        );
+      },
+    );
+  }
 }
 
 class _StoreChoice extends StatelessWidget {
