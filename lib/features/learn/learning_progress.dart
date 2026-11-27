@@ -34,6 +34,8 @@ class LearningProgress {
     this.lastDay,
     this.lessonsToday = 0,
     this.claimDay,
+    this.dailyClaims = const {},
+    this.milestoneClaims = const {},
     this.freezes = 0,
     this.displayName,
     this.dailyGoal,
@@ -55,6 +57,8 @@ class LearningProgress {
       lastDay: data['lastDay'] as int?,
       lessonsToday: data['lessonsToday'] as int? ?? 0,
       claimDay: data['claimDay'] as int?,
+      dailyClaims: Set<String>.from(data['dailyClaims'] as List? ?? []),
+      milestoneClaims: Set<int>.from(data['milestoneClaims'] as List? ?? []),
       freezes: data['freezes'] as int? ?? 0,
       displayName: data['displayName'] as String?,
       dailyGoal: data['dailyGoal'] as int?,
@@ -77,6 +81,8 @@ class LearningProgress {
   final int? lastDay;
   final int lessonsToday;
   final int? claimDay;
+  final Set<String> dailyClaims;
+  final Set<int> milestoneClaims;
   final int freezes;
   final String? displayName;
   final int? dailyGoal;
@@ -96,6 +102,8 @@ class LearningProgress {
     'lastDay': lastDay,
     'lessonsToday': lessonsToday,
     'claimDay': claimDay,
+    'dailyClaims': dailyClaims.toList(),
+    'milestoneClaims': milestoneClaims.toList(),
     'freezes': freezes,
     'displayName': displayName,
     'dailyGoal': dailyGoal,
@@ -109,6 +117,40 @@ class LearningProgress {
   };
 
   int lessonsOn(int day) => lastDay == day ? lessonsToday : 0;
+
+  bool dailyClaimed(String id, int day) =>
+      (claimDay == day && id == 'goal') || dailyClaims.contains('$day:$id');
+
+  LearningProgress claimDaily(String id, int day, int target, int reward) {
+    if (target < 1 ||
+        reward < 1 ||
+        dailyClaimed(id, day) ||
+        lessonsOn(day) < target) {
+      return this;
+    }
+    return copyWith(
+      gems: gems + reward,
+      dailyClaims: {
+        for (final key in dailyClaims)
+          if (key.startsWith('$day:')) key,
+        '$day:$id',
+      },
+      claimDay: id == 'goal' ? day : claimDay,
+    );
+  }
+
+  LearningProgress claimMilestone(int target, int reward) {
+    if (target < 1 ||
+        reward < 1 ||
+        completed.length < target ||
+        milestoneClaims.contains(target)) {
+      return this;
+    }
+    return copyWith(
+      gems: gems + reward,
+      milestoneClaims: {...milestoneClaims, target},
+    );
+  }
 
   int activeStreak(int day) {
     if (lastDay == null) return 0;
@@ -209,6 +251,8 @@ class LearningProgress {
     int? lastDay,
     int? lessonsToday,
     int? claimDay,
+    Set<String>? dailyClaims,
+    Set<int>? milestoneClaims,
     int? freezes,
     String? displayName,
     int? dailyGoal,
@@ -228,6 +272,8 @@ class LearningProgress {
       lastDay: lastDay ?? this.lastDay,
       lessonsToday: lessonsToday ?? this.lessonsToday,
       claimDay: claimDay ?? this.claimDay,
+      dailyClaims: dailyClaims ?? this.dailyClaims,
+      milestoneClaims: milestoneClaims ?? this.milestoneClaims,
       freezes: freezes ?? this.freezes,
       displayName: displayName ?? this.displayName,
       dailyGoal: dailyGoal ?? this.dailyGoal,

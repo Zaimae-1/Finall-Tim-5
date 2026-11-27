@@ -19,7 +19,6 @@ const _blue = Color(0xFF075DAB);
 const _muted = Color(0xFF47647A);
 const _outline = Color(0xFFD8E6F0);
 const _ice = Color(0xFFE5F3FF);
-const _coral = Color(0xFFA84E18);
 
 enum _Destination {
   learn('Belajar', Icons.explore_rounded),
@@ -151,13 +150,17 @@ class _LearningHomeState extends State<LearningHome> {
     }
   }
 
-  void _claimQuest(LearningProgress progress, int goal) {
+  void _claimQuest(LearningProgress progress, String id, int goal, int reward) {
     final day = localDay(DateTime.now());
-    if (progress.claimDay == day || progress.lessonsOn(day) < goal) return;
-    _update(
-      progress.copyWith(claimDay: day, gems: progress.gems + 15),
-      message: 'Hadiah quest diterima. +15 gems!',
-    );
+    final next = progress.claimDaily(id, day, goal, reward);
+    if (identical(next, progress)) return;
+    _update(next, message: 'Hadiah misi diterima. +$reward Gems!');
+  }
+
+  void _claimMilestone(LearningProgress progress, int target, int reward) {
+    final next = progress.claimMilestone(target, reward);
+    if (identical(next, progress)) return;
+    _update(next, message: 'Peti pencapaian dibuka. +$reward Gems!');
   }
 
   Future<void> _rename(LearningProgress progress, String name) async {
@@ -338,24 +341,15 @@ class _LearningHomeState extends State<LearningHome> {
                 backgroundColor: _tab == _Destination.learn
                     ? const Color(0xFFB8EAF4)
                     : const Color(0xFFF3F8FC),
-                appBar: AppBar(
-                  title: const _Brand(),
-                  actions: [
-                    _Metric(
-                      icon: Icons.local_fire_department_rounded,
-                      value: '${progress.activeStreak(day)}',
-                      label: 'hari streak',
-                      color: _coral,
+                appBar: PreferredSize(
+                  preferredSize: const Size.fromHeight(78),
+                  child: SafeArea(
+                    bottom: false,
+                    child: _DynamicHeader(
+                      streak: progress.activeStreak(day),
+                      gems: progress.gems,
                     ),
-                    const SizedBox(width: 12),
-                    _Metric(
-                      icon: Icons.diamond_rounded,
-                      value: '${progress.gems}',
-                      label: 'gems',
-                      color: _blue,
-                    ),
-                    const SizedBox(width: 16),
-                  ],
+                  ),
                 ),
                 bottomNavigationBar: LearningTabBar(
                   selectedIndex: _tab.index,
@@ -395,7 +389,7 @@ class _LearningHomeState extends State<LearningHome> {
                                   wide ? 32 : 16,
                                   wide ? 28 : 12,
                                   wide ? 32 : 16,
-                                  MediaQuery.paddingOf(context).bottom + 16,
+                                  MediaQuery.paddingOf(context).bottom + 110,
                                 ),
                                 children: content,
                               ),
@@ -411,38 +405,83 @@ class _LearningHomeState extends State<LearningHome> {
     );
   }
 
-  Widget _questCard(LearningProgress progress, int goal, int day) {
-    final count = progress.lessonsOn(day).clamp(0, goal);
-    final claimed = progress.claimDay == day;
-    return _Panel(
-      children: [
-        const _Title(icon: Icons.flag_rounded, title: 'Quest harian'),
-        const SizedBox(height: 14),
-        Text('Selesaikan $goal lesson hari ini.'),
-        const SizedBox(height: 10),
-        MotionProgress(value: count / goal, label: 'Progres quest'),
-        const SizedBox(height: 8),
-        Text('$count / $goal lesson · +15 gems'),
-        const SizedBox(height: 14),
-        MotionReveal(
-          key: ValueKey(claimed),
-          startScale: .92,
-          lift: 4,
-          child: FilledButton(
-            onPressed: !claimed && count == goal && !_saving
-                ? () => _claimQuest(progress, goal)
-                : null,
-            child: Text(claimed ? 'Sudah diklaim' : 'Klaim hadiah'),
-          ),
-        ),
-      ],
-    );
-  }
-
   List<Widget> _quests(LearningProgress progress, int goal, int day) => [
-    const _Heading(title: 'Quest', detail: 'Hadiah untuk latihan hari ini.'),
+    const _Heading(title: 'Quest', detail: 'Jelajahi laut, kumpulkan harta.'),
     const SizedBox(height: 18),
-    _questCard(progress, goal, day),
+    _QuestHero(lessonsToday: progress.lessonsOn(day)),
+    const SizedBox(height: 22),
+    const _SectionLabel(icon: Icons.explore_rounded, title: 'Misi hari ini'),
+    const SizedBox(height: 12),
+    _QuestCard(
+      title: 'Berlayar pertama',
+      detail: 'Selesaikan 1 latihan hari ini',
+      icon: Icons.sailing_rounded,
+      count: progress.lessonsOn(day),
+      target: 1,
+      reward: 5,
+      claimed: progress.dailyClaimed('first', day),
+      onClaim: _saving ? null : () => _claimQuest(progress, 'first', 1, 5),
+    ),
+    const SizedBox(height: 12),
+    _QuestCard(
+      title: 'Tujuan kapten',
+      detail: 'Penuhi target belajar harianmu',
+      icon: Icons.navigation_rounded,
+      count: progress.lessonsOn(day),
+      target: goal,
+      reward: 15,
+      claimed: progress.dailyClaimed('goal', day),
+      mainQuest: true,
+      onClaim: _saving ? null : () => _claimQuest(progress, 'goal', goal, 15),
+    ),
+    const SizedBox(height: 12),
+    _QuestCard(
+      title: 'Arungi tiga ombak',
+      detail: 'Selesaikan 3 latihan hari ini',
+      icon: Icons.waves_rounded,
+      count: progress.lessonsOn(day),
+      target: 3,
+      reward: 10,
+      claimed: progress.dailyClaimed('three', day),
+      onClaim: _saving ? null : () => _claimQuest(progress, 'three', 3, 10),
+    ),
+    const SizedBox(height: 24),
+    const _SectionLabel(
+      icon: Icons.emoji_events_rounded,
+      title: 'Peti pencapaian',
+    ),
+    const SizedBox(height: 12),
+    for (final target in [5, 20, 50, 100]) ...[
+      _QuestCard(
+        title: 'Penjelajah $target pulau',
+        detail: 'Tuntaskan $target level di peta',
+        icon: Icons.workspace_premium_rounded,
+        count: progress.completed.length,
+        target: target,
+        reward: target == 100
+            ? 100
+            : target == 50
+            ? 50
+            : target == 20
+            ? 25
+            : 10,
+        claimed: progress.milestoneClaims.contains(target),
+        onClaim: _saving
+            ? null
+            : () => _claimMilestone(
+                progress,
+                target,
+                target == 100
+                    ? 100
+                    : target == 50
+                    ? 50
+                    : target == 20
+                    ? 25
+                    : 10,
+              ),
+      ),
+      const SizedBox(height: 12),
+    ],
   ];
 
   List<Widget> _ranks(LearningProgress progress, String name) {
@@ -628,31 +667,28 @@ class _LearningHomeState extends State<LearningHome> {
           'Lima kostum maskot · 25 Gems per skin. Skin terpasang muncul di peta dan quiz.',
         ),
         const SizedBox(height: 14),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
+        Column(
           children: [
             for (var id = 0; id < sharkSkinNames.length; id++)
-              _StoreChoice(
-                name: sharkSkinNames[id],
-                price: 25,
-                owned: progress.ownedSkins.contains(id),
-                active: progress.skinId == id,
-                canBuy: progress.gems >= 25,
-                preview: SharkSkinScope(
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _SkinChoice(
+                  name: sharkSkinNames[id],
+                  owned: progress.ownedSkins.contains(id),
+                  active: progress.skinId == id,
+                  canBuy: progress.gems >= 25,
                   skinId: id,
-                  child: SharkMascot(size: 67, animate: false),
+                  onPressed: _saving
+                      ? null
+                      : () => _update(
+                          progress.ownedSkins.contains(id)
+                              ? progress.equipSkin(id)
+                              : progress.buySkin(id),
+                          message: progress.ownedSkins.contains(id)
+                              ? '${sharkSkinNames[id]} dipakai.'
+                              : '${sharkSkinNames[id]} dibeli.',
+                        ),
                 ),
-                onPressed: _saving
-                    ? null
-                    : () => _update(
-                        progress.ownedSkins.contains(id)
-                            ? progress.equipSkin(id)
-                            : progress.buySkin(id),
-                        message: progress.ownedSkins.contains(id)
-                            ? '${sharkSkinNames[id]} dipakai.'
-                            : '${sharkSkinNames[id]} dibeli.',
-                      ),
               ),
           ],
         ),
@@ -668,63 +704,13 @@ class _LearningHomeState extends State<LearningHome> {
   ) => [
     const _Heading(title: 'Profil', detail: 'Akun petualanganmu'),
     const SizedBox(height: 18),
-    _Panel(
-      children: [
-        const _Title(icon: Icons.person_rounded, title: 'Profil pelajar'),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            ProfileArt(id: progress.avatarId, size: 78),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: _navy,
-                    ),
-                  ),
-                  Text(
-                    widget.profile.email,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: _muted),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        const Text('Statistik', style: TextStyle(fontWeight: FontWeight.w900)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 18,
-          runSpacing: 10,
-          children: [
-            _Metric(
-              icon: Icons.local_fire_department_rounded,
-              value: '${progress.activeStreak(day)}',
-              label: 'hari streak',
-              color: _coral,
-            ),
-            _Metric(
-              icon: Icons.check_circle_rounded,
-              value: '${progress.completed.length}',
-              label: 'lesson',
-              color: const Color(0xFF177054),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        OutlinedButton(
-          onPressed: _saving ? null : () => _editProfile(progress, name),
-          child: const Text('Edit Profil'),
-        ),
-      ],
+    _ProfileHero(
+      avatarId: progress.avatarId,
+      name: name,
+      email: widget.profile.email,
+      streak: progress.activeStreak(day),
+      completed: progress.completed.length,
+      onEdit: _saving ? null : () => _editProfile(progress, name),
     ),
     const SizedBox(height: 14),
     _Panel(
@@ -820,6 +806,253 @@ class _LearningHomeState extends State<LearningHome> {
   ];
 }
 
+class _ProfileHero extends StatelessWidget {
+  const _ProfileHero({
+    required this.avatarId,
+    required this.name,
+    required this.email,
+    required this.streak,
+    required this.completed,
+    required this.onEdit,
+  });
+  final int avatarId;
+  final String name;
+  final String email;
+  final int streak;
+  final int completed;
+  final VoidCallback? onEdit;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(21),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF06365C), Color(0xFF087AA5), Color(0xFF55C4D5)],
+      ),
+      borderRadius: BorderRadius.circular(28),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x30053D6E),
+          blurRadius: 18,
+          offset: Offset(0, 9),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Profil pelajar',
+          style: TextStyle(
+            color: Color(0xFFB0F1FF),
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.7,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: ProfileArt(id: avatarId, size: 78),
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 23,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  Text(
+                    email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Color(0xFFE2F6FF)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        Wrap(
+          spacing: 10,
+          runSpacing: 9,
+          children: [
+            _ProfileStat(
+              icon: Icons.local_fire_department_rounded,
+              value: '$streak',
+              label: 'hari streak',
+            ),
+            _ProfileStat(
+              icon: Icons.check_circle_rounded,
+              value: '$completed',
+              label: 'lesson selesai',
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilledButton.icon(
+            onPressed: onEdit,
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: _navy,
+            ),
+            icon: const Icon(Icons.edit_rounded, size: 18),
+            label: const Text('Edit Profil'),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _ProfileStat extends StatelessWidget {
+  const _ProfileStat({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+  final IconData icon;
+  final String value;
+  final String label;
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+    decoration: BoxDecoration(
+      color: const Color(0x33001B33),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: const Color(0x6684E3EF)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: const Color(0xFFFFCF86), size: 19),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            '$value $label',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _SkinChoice extends StatelessWidget {
+  const _SkinChoice({
+    required this.name,
+    required this.owned,
+    required this.active,
+    required this.canBuy,
+    required this.skinId,
+    required this.onPressed,
+  });
+  final String name;
+  final bool owned;
+  final bool active;
+  final bool canBuy;
+  final int skinId;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: active ? const Color(0xFFE4F5FF) : const Color(0xFFF5FAFD),
+      borderRadius: BorderRadius.circular(19),
+      border: Border.all(
+        color: active ? _blue : _outline,
+        width: active ? 2 : 1,
+      ),
+    ),
+    child: Row(
+      children: [
+        Container(
+          width: 84,
+          height: 84,
+          decoration: BoxDecoration(
+            color: const Color(0xFFCDECF8),
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: SharkSkinScope(
+            skinId: skinId,
+            child: SharkMascot(size: 73, animate: false),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: _navy,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                active
+                    ? 'Sedang dipakai'
+                    : owned
+                    ? 'Sudah dimiliki'
+                    : '25 Gems · terkunci',
+                style: const TextStyle(color: _muted, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 5),
+        SizedBox(
+          width: 76,
+          child: FilledButton.tonal(
+            onPressed: active || (!owned && !canBuy) ? null : onPressed,
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+            ),
+            child: Text(
+              active
+                  ? 'Dipakai'
+                  : owned
+                  ? 'Pakai'
+                  : 'Beli',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 class _StoreChoice extends StatelessWidget {
   const _StoreChoice({
     required this.name,
@@ -891,29 +1124,336 @@ class _StoreChoice extends StatelessWidget {
   );
 }
 
-class _Brand extends StatelessWidget {
-  const _Brand();
+class _DynamicHeader extends StatelessWidget {
+  const _DynamicHeader({required this.streak, required this.gems});
+
+  final int streak;
+  final int gems;
 
   @override
-  Widget build(BuildContext context) {
-    return const Row(
-      mainAxisSize: MainAxisSize.min,
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+    child: Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 650),
+        child: Container(
+          height: 61,
+          decoration: BoxDecoration(
+            color: const Color(0xF20A2D4B),
+            borderRadius: BorderRadius.circular(34),
+            border: Border.all(color: const Color(0xFF70C7E6), width: 1.4),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x3305446E),
+                blurRadius: 18,
+                offset: Offset(0, 7),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 15),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 57,
+                child: _IslandMetric(
+                  icon: Icons.local_fire_department_rounded,
+                  value: streak,
+                  color: const Color(0xFFFFA656),
+                  label: 'hari streak',
+                ),
+              ),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFB7EAFF),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const ClipOval(
+                        child: SharkMascot(size: 36, animate: false),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Flexible(
+                      child: Text(
+                        'LingoShark',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: 57,
+                child: _IslandMetric(
+                  icon: Icons.diamond_rounded,
+                  value: gems,
+                  color: const Color(0xFF71D5FF),
+                  label: 'gems',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _IslandMetric extends StatelessWidget {
+  const _IslandMetric({
+    required this.icon,
+    required this.value,
+    required this.color,
+    required this.label,
+  });
+  final IconData icon;
+  final int value;
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: '$value $label',
+    excludeSemantics: true,
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.waves_rounded, color: _blue, size: 25),
-        SizedBox(width: 7),
+        Icon(icon, color: color, size: 19),
+        const SizedBox(width: 2),
         Flexible(
-          child: Text(
-            'LingoShark',
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: _navy,
-              fontSize: 21,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -.8,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: Text(
+              '$value',
+              key: ValueKey(value),
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                fontSize: 15,
+              ),
             ),
           ),
         ),
       ],
+    ),
+  );
+}
+
+class _QuestHero extends StatelessWidget {
+  const _QuestHero({required this.lessonsToday});
+  final int lessonsToday;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(21),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        colors: [Color(0xFF073D69), Color(0xFF078AB6)],
+      ),
+      borderRadius: BorderRadius.circular(26),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x26045587),
+          blurRadius: 17,
+          offset: Offset(0, 8),
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'PAPAN MISI',
+                style: TextStyle(
+                  color: Color(0xFF86E6FF),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Cari harta di setiap ombak',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 23,
+                  fontWeight: FontWeight.w900,
+                  height: 1.1,
+                ),
+              ),
+              const SizedBox(height: 9),
+              Text(
+                '$lessonsToday latihan hari ini · misi baru setiap hari',
+                style: const TextStyle(color: Color(0xFFD8F5FF)),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        const Icon(
+          Icons.inventory_2_rounded,
+          size: 67,
+          color: Color(0xFFFFC875),
+        ),
+      ],
+    ),
+  );
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel({required this.icon, required this.title});
+  final IconData icon;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Icon(icon, color: _blue),
+      const SizedBox(width: 9),
+      Expanded(
+        child: Text(
+          title,
+          style: const TextStyle(
+            color: _navy,
+            fontSize: 21,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+class _QuestCard extends StatelessWidget {
+  const _QuestCard({
+    required this.title,
+    required this.detail,
+    required this.icon,
+    required this.count,
+    required this.target,
+    required this.reward,
+    required this.claimed,
+    required this.onClaim,
+    this.mainQuest = false,
+  });
+  final String title;
+  final String detail;
+  final IconData icon;
+  final int count;
+  final int target;
+  final int reward;
+  final bool claimed;
+  final bool mainQuest;
+  final VoidCallback? onClaim;
+
+  @override
+  Widget build(BuildContext context) {
+    final ready = count >= target;
+    return Container(
+      decoration: BoxDecoration(
+        color: claimed ? const Color(0xFFE5F4EF) : Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: ready ? const Color(0xFF58B5C9) : _outline,
+          width: 1.5,
+        ),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 45,
+                height: 45,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE1F5FF),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: _blue),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: _navy,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 17,
+                      ),
+                    ),
+                    Text(
+                      detail,
+                      style: const TextStyle(color: _muted, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.inventory_2_rounded,
+                color: Color(0xFFBC782B),
+                size: 22,
+              ),
+            ],
+          ),
+          const SizedBox(height: 13),
+          MotionProgress(
+            value: (count / target).clamp(0.0, 1.0),
+            label: 'Progres $title',
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${count.clamp(0, target)} / $target · +$reward Gems',
+                  style: const TextStyle(
+                    color: _muted,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 126,
+                height: 36,
+                child: FilledButton(
+                  onPressed: ready && !claimed ? onClaim : null,
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 13),
+                  ),
+                  child: Text(
+                    claimed
+                        ? 'Sudah diklaim'
+                        : mainQuest
+                        ? 'Klaim hadiah'
+                        : 'Ambil hadiah',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -945,44 +1485,6 @@ class _Heading extends StatelessWidget {
         const SizedBox(height: 7),
         Text(detail, style: const TextStyle(color: _muted, fontSize: 15)),
       ],
-    );
-  }
-}
-
-class _Metric extends StatelessWidget {
-  const _Metric({
-    required this.icon,
-    required this.value,
-    required this.label,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String value;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: '$value $label',
-      excludeSemantics: true,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 21),
-          const SizedBox(width: 4),
-          MotionReveal(
-            key: ValueKey(value),
-            startScale: 1.18,
-            lift: 3,
-            child: Text(
-              value,
-              style: TextStyle(color: color, fontWeight: FontWeight.w900),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

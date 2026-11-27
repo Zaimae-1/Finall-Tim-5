@@ -125,6 +125,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(find.text('LingoShark'), findsOneWidget);
+    expect(find.bySemanticsLabel('0 hari streak'), findsOneWidget);
     expect(find.text('Jalur belajar'), findsOneWidget);
     expect(find.byType(LearningPath), findsOneWidget);
     expect(find.text('Quest harian'), findsNothing);
@@ -180,6 +182,10 @@ void main() {
         matching: find.byIcon(Icons.flag_rounded),
       ),
     );
+    await tester.pumpAndSettle();
+    expect(find.text('Berlayar pertama'), findsOneWidget);
+    expect(find.text('Tujuan kapten'), findsOneWidget);
+    await tester.drag(find.byType(ListView).first, const Offset(0, -190));
     await tester.pumpAndSettle();
     await _tap(tester, 'Klaim hadiah');
     expect(
@@ -289,6 +295,7 @@ void main() {
 
       await tester.binding.setSurfaceSize(const Size(320, 568));
       await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'resize');
       final signOut = find.widgetWithText(OutlinedButton, 'Keluar');
       await tester.scrollUntilVisible(
         signOut,
@@ -303,6 +310,61 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('Quest, shop skins, and profile fit a narrow phone', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    _reduceMotion(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: lingoSharkTheme(),
+        home: LearningHome(
+          profile: const LearnerProfile(
+            name: 'Nara',
+            email: 'nara@example.com',
+          ),
+          onSignOut: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final tabs = find.byType(NavigationBar);
+    await tester.tap(
+      find.descendant(of: tabs, matching: find.byIcon(Icons.flag_rounded)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('PAPAN MISI'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Berlayar pertama'),
+      120,
+      scrollable: find.byType(Scrollable),
+    );
+    expect(find.text('Berlayar pertama'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(
+      find.descendant(
+        of: tabs,
+        matching: find.byIcon(Icons.storefront_rounded),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Skin hiu'),
+      180,
+      scrollable: find.byType(Scrollable),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Kapten Laut'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(
+      find.descendant(of: tabs, matching: find.byIcon(Icons.person_rounded)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Profil pelajar'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('Hover glides between tabs and fades without selecting a tab', (
     tester,
@@ -417,6 +479,30 @@ void main() {
       const LearningProgress().rewardXp(lessons[0].id, true, level: 5),
       25,
     );
+  });
+
+  test('Daily missions and milestone chests grant Gems once', () {
+    final day = localDay(DateTime(2026, 11, 27));
+    var progress = const LearningProgress().finish(lessons[0].id, true, day);
+    progress = progress.claimDaily('first', day, 1, 5);
+    expect(progress.gems, 10);
+    expect(progress.claimDaily('first', day, 1, 5), same(progress));
+    progress = progress.claimDaily('goal', day, 1, 15);
+    expect(progress.gems, 25);
+    expect(progress.claimDay, day);
+    expect(progress.claimDaily('goal', day, 1, 15), same(progress));
+    expect(progress.claimDaily('three', day, 3, 10), same(progress));
+    expect(progress.claimMilestone(5, 10), same(progress));
+    for (var i = 1; i < 5; i++) {
+      progress = progress.finish(lessons[i].id, true, day);
+    }
+    progress = progress.claimMilestone(5, 10);
+    expect(progress.gems, 65);
+    expect(progress.claimMilestone(5, 10), same(progress));
+    final loaded = LearningProgress.fromJson(progress.toJson());
+    expect(loaded.dailyClaimed('first', day), isTrue);
+    expect(loaded.milestoneClaims, {5});
+    expect(loaded.dailyClaimed('first', day + 1), isFalse);
   });
 
   test(
@@ -667,11 +753,17 @@ void main() {
     );
     await tester.pumpAndSettle();
     final mascot = find.byType(SharkMascot);
-    expect(SharkSkinScope.of(tester.element(mascot)), 2);
+    expect(mascot, findsWidgets);
+    for (final element in mascot.evaluate()) {
+      expect(SharkSkinScope.of(element), 2);
+    }
     await _tap(tester, 'Sapa seseorang');
     await _tap(tester, 'Selamat pagi');
     await _tap(tester, 'Periksa jawaban');
-    expect(SharkSkinScope.of(tester.element(find.byType(SharkMascot))), 2);
+    expect(find.byType(SharkMascot), findsWidgets);
+    for (final element in find.byType(SharkMascot).evaluate()) {
+      expect(SharkSkinScope.of(element), 2);
+    }
     expect(tester.takeException(), isNull);
   });
 
